@@ -1,0 +1,155 @@
+{
+  "pageVisits": [
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": "7/2/2025, 3:20:01 PM",
+      "leave": "7/2/2025, 3:20:01 PM",
+      "activeDuration": 0
+    },
+    {
+      "pageId": "Assignment1.ipynb",
+      "enter": "7/2/2025, 3:20:01 PM",
+      "leave": "7/2/2025, 3:20:08 PM",
+      "activeDuration": 6
+    },
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": "7/2/2025, 3:20:08 PM",
+      "leave": "7/2/2025, 3:20:09 PM",
+      "activeDuration": 1
+    },
+    {
+      "pageId": "Assignment1.ipynb",
+      "enter": "7/2/2025, 3:20:11 PM",
+      "leave": "7/2/2025, 3:20:18 PM",
+      "activeDuration": 6
+    },
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": "7/2/2025, 3:20:18 PM",
+      "leave": "7/2/2025, 3:20:20 PM",
+      "activeDuration": 2
+    },
+    {
+      "pageId": "Assignment1.ipynb",
+      "enter": "7/2/2025, 3:20:20 PM",
+      "leave": "7/2/2025, 3:20:24 PM",
+      "activeDuration": 4
+    },
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": "7/2/2025, 3:20:24 PM",
+      "leave": "7/2/2025, 3:20:27 PM",
+      "activeDuration": 2
+    },
+    {
+      "pageId": "Launcher",
+      "enter": "7/2/2025, 3:20:27 PM",
+      "leave": "7/2/2025, 3:20:30 PM",
+      "activeDuration": 3
+    }
+  ],
+  "cellVisits": [
+    {
+      "notebookId": "Assignment1.ipynb",
+      "cellId": "fab29afc-3a15-4eff-a5a3-d6d1a8ac5249",
+      "cellIndex": 0,
+      "enter": "7/2/2025, 3:20:02 PM",
+      "leave": "7/2/2025, 3:20:13 PM",
+      "activeDuration": 11
+    },
+    {
+      "notebookId": "Assignment1.ipynb",
+      "cellId": "fdd07b0d-2a1c-4ebc-9424-e37e1c0e52bb",
+      "cellIndex": 1,
+      "enter": "7/2/2025, 3:20:13 PM",
+      "leave": "7/2/2025, 3:20:16 PM",
+      "activeDuration": 2
+    },
+    {
+      "notebookId": "Assignment1.ipynb",
+      "cellId": "6be7a67e-8e23-4975-a637-281c88d3ac33",
+      "cellIndex": 3,
+      "enter": "7/2/2025, 3:20:16 PM",
+      "leave": "7/2/2025, 3:20:16 PM",
+      "activeDuration": 0
+    },
+    {
+      "notebookId": "Assignment2.ipynb",
+      "cellId": "da4ccdce-c3c9-493c-8ed5-b952396dcfd0",
+      "cellIndex": 0,
+      "enter": "7/2/2025, 3:20:02 PM",
+      "leave": "7/2/2025, 3:20:19 PM",
+      "activeDuration": 17
+    },
+    {
+      "notebookId": "Assignment2.ipynb",
+      "cellId": "6217e735-5896-4b13-adce-cbde658950f6",
+      "cellIndex": 1,
+      "enter": "7/2/2025, 3:20:19 PM",
+      "leave": "7/2/2025, 3:20:19 PM",
+      "activeDuration": 0
+    },
+    {
+      "notebookId": "Assignment1.ipynb",
+      "cellId": "03fc9dc6-c433-4a9d-a77d-515d3906d2f7",
+      "cellIndex": 4,
+      "enter": "7/2/2025, 3:20:16 PM",
+      "leave": "7/2/2025, 3:20:24 PM",
+      "activeDuration": 8
+    },
+    {
+      "notebookId": "Assignment2.ipynb",
+      "cellId": "d8f17690-3dc4-4a6b-9e30-5b6735d4e5e2",
+      "cellIndex": 2,
+      "enter": "7/2/2025, 3:20:19 PM",
+      "leave": "7/2/2025, 3:20:26 PM",
+      "activeDuration": 6
+    }
+  ],
+  "copyPasteActivity": [
+    {
+      "type": "copy",
+      "timestamp": 1751484015090,
+      "contentLength": 41,
+      "contentType": "text",
+      "contentHash": "8000a496",
+      "content": "int main(){\n    printf(\"Hello World!\");\n}",
+      "contentPreview": "int main(){     printf(\"Hello World!\"); }",
+      "context": {
+        "notebookId": "Assignment1.ipynb"
+      },
+      "sourceType": "internal"
+    },
+    {
+      "type": "paste",
+      "timestamp": 1751484020142,
+      "contentLength": 41,
+      "contentType": "text",
+      "contentHash": "8000a496",
+      "content": "int main(){\n    printf(\"Hello World!\");\n}",
+      "contentPreview": "int main(){     printf(\"Hello World!\"); }",
+      "context": {
+        "notebookId": "Assignment2.ipynb"
+      },
+      "sourceType": "internal"
+    },
+    {
+      "type": "paste",
+      "timestamp": 1751484022947,
+      "contentLength": 41,
+      "contentType": "text",
+      "contentHash": "8000a496",
+      "content": "int main(){\n    printf(\"Hello World!\");\n}",
+      "contentPreview": "int main(){     printf(\"Hello World!\"); }",
+      "context": {
+        "notebookId": "Assignment1.ipynb"
+      },
+      "sourceType": "internal"
+    }
+  ],
+  "metadata": {
+    "timestamp": "7/2/2025, 3:20:38 PM",
+    "totalCopyPasteEvents": 3
+  }
+}

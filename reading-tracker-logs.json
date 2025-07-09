@@ -1,0 +1,97 @@
+{
+  "pageVisits": [
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": 1751484001944,
+      "leave": 1751484001944,
+      "activeDuration": 0
+    },
+    {
+      "pageId": "Assignment1.ipynb",
+      "enter": 1751484001969,
+      "leave": 1751484008058,
+      "activeDuration": 6
+    },
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": 1751484008086,
+      "leave": 1751484009737,
+      "activeDuration": 1
+    },
+    {
+      "pageId": "Assignment1.ipynb",
+      "enter": 1751484011487,
+      "leave": 1751484018288,
+      "activeDuration": 6
+    },
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": 1751484018327,
+      "leave": 1751484020604,
+      "activeDuration": 2
+    },
+    {
+      "pageId": "Assignment1.ipynb",
+      "enter": 1751484020651,
+      "leave": 1751484024896,
+      "activeDuration": 4
+    },
+    {
+      "pageId": "Assignment2.ipynb",
+      "enter": 1751484024942,
+      "leave": 1751484027159,
+      "activeDuration": 2
+    },
+    {
+      "pageId": "Launcher",
+      "enter": 1751484027281,
+      "leave": 1751484030317,
+      "activeDuration": 3
+    }
+  ],
+  "copyPasteActivity": [
+    {
+      "type": "copy",
+      "timestamp": 1751484015090,
+      "contentLength": 41,
+      "contentType": "text",
+      "contentHash": "8000a496",
+      "content": "int main(){\n    printf(\"Hello World!\");\n}",
+      "contentPreview": "int main(){     printf(\"Hello World!\"); }",
+      "context": {
+        "notebookId": "Assignment1.ipynb"
+      },
+      "sourceType": "internal"
+    },
+    {
+      "type": "paste",
+      "timestamp": 1751484020142,
+      "contentLength": 41,
+      "contentType": "text",
+      "contentHash": "8000a496",
+      "content": "int main(){\n    printf(\"Hello World!\");\n}",
+      "contentPreview": "int main(){     printf(\"Hello World!\"); }",
+      "context": {
+        "notebookId": "Assignment2.ipynb"
+      },
+      "sourceType": "internal"
+    },
+    {
+      "type": "paste",
+      "timestamp": 1751484022947,
+      "contentLength": 41,
+      "contentType": "text",
+      "contentHash": "8000a496",
+      "content": "int main(){\n    printf(\"Hello World!\");\n}",
+      "contentPreview": "int main(){     printf(\"Hello World!\"); }",
+      "context": {
+        "notebookId": "Assignment1.ipynb"
+      },
+      "sourceType": "internal"
+    }
+  ],
+  "metadata": {
+    "timestamp": 1751484035922,
+    "totalCopyPasteEvents": 3
+  }
+}

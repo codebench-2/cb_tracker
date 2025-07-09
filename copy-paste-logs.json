@@ -1,0 +1,25 @@
+{
+  "copyPasteActivity": [
+    {
+      "type": "copy",
+      "timestamp": 1751998692736,
+      "contentLength": 10,
+      "contentType": "text",
+      "contentHash": "52187420",
+      "content": "JupyterLab",
+      "contentPreview": "JupyterLab",
+      "context": {
+        "notebookId": "Launcher"
+      },
+      "sourceType": "internal"
+    }
+  ],
+  "metadata": {
+    "timestamp": 1751998692737,
+    "totalEvents": 1,
+    "totalCopies": 1,
+    "totalPastes": 0,
+    "internalPastes": 0,
+    "externalPastes": 0
+  }
+}
