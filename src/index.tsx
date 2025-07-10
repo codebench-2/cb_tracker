@@ -142,6 +142,32 @@ export const completedCellCount = () => (window as any).__completedCells?.size |
 export const copyPasteCount = () => copyPasteLogs.length;
 export const totalTasks = 10;
 
+export async function uploadNotebookToCodeBench(notebook: {
+  notebook_id: string;
+  net_id: string;
+  course_id: string;
+  name: string;
+  type: 'activebook' | 'regular';
+  topics: string[];
+  last_opened: string;
+}) {
+  console.log("🚀 Uploading notebook info to CodeBench:", notebook);
+  try {
+    const response = await axios.post('http://localhost:8888/cb-server/notebooks', notebook, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    console.log("✅ Notebook upload response:", response.data);
+    if (!response.data.success) {
+      console.error("❌ CodeBench reported notebook upload failure:", response.data.error);
+    }
+  } catch (error) {
+    console.error("❌ Notebook upload failed:", error);
+    if (error && typeof error === 'object' && 'isAxiosError' in error) {
+      console.error("Axios error details:", (error as any).response?.data || (error as any).message);
+    }
+  }
+}
+
 /**
  * Plugin definition
  */
@@ -297,6 +323,48 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
 
         // Update every 1 second
         setInterval(updateCellTimers, 1000);
+
+        panel.context.ready.then(async () => {
+          const notebookPath = panel.context.path; // full file path
+          const net_id = NET_ID;
+
+          let course_id = 'ROOT_NOTEBOOKS';
+          const pathParts = notebookPath.split('/');
+          
+          if (pathParts.length >= 2) {
+            course_id = pathParts[0];  // correct when inside course folder
+          } else {
+            console.warn(`🪐 Notebook is in root, cannot determine course_id reliably for: ${notebookPath}`);
+          }        
+
+          const notebookName = (notebookPath.split('/').pop() || notebookPath);
+          const name = notebookName;
+          const last_opened = new Date().toISOString();
+        
+          // Determine notebook type
+          let type: 'activebook' | 'regular' = 'regular';
+          try {
+            const model = panel.content.model;
+            const metadata = model?.metadata ? (model.metadata as any) : {};
+            if (String(metadata?.activebook).toLowerCase() === 'true') {
+              type = 'activebook';
+            }
+          } catch (error) {
+            console.warn("Could not read notebook metadata for type detection:", error);
+          }
+        
+          const notebookInfo = {
+            notebook_id: notebookPath,
+            net_id,
+            course_id,
+            name,
+            type,
+            topics: [],
+            last_opened
+          };
+        
+          await uploadNotebookToCodeBench(notebookInfo);
+        });        
 
         return widget;
       }
