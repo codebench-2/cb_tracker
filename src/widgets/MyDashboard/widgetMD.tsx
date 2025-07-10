@@ -11,6 +11,7 @@ export const MyDashboard = () => {
   const [dailyActiveMinutes, setDailyActiveMinutes] = useState<number[]>([]);
   const [consistencyScore, setConsistencyScore] = useState<number | null>(null);
   const [consistencyStreak, setConsistencyStreak] = useState<{ day: string; value: number }[]>([]);
+  const [typeChartData, setTypeChartData] = useState<{ name: string; minutes: number }[]>([]);
   
   // For streaks & engagement chart
   useEffect(() => {
@@ -77,51 +78,66 @@ export const MyDashboard = () => {
     loadData();
   }, []);
 
-  // For summary of work today
-  useEffect(() => {
-    async function loadData() {
-      const logs = await fetchLogsFromCodeBench();
+// For summary of work today
+useEffect(() => {
+  async function loadData() {
+    const logs = await fetchLogsFromCodeBench();
 
-      console.log("Fetching logs from CodeBench server...");
-      console.log(logs);
-  
-      let totalLabTime = 0;
-      const notebookMap: { [notebookId: string]: number } = {};
-  
-      logs.forEach((log: any) => {
-        const { log_info } = log;
-        if (log_info.type === 'window') {
-          totalLabTime += log_info.duration;
-        }
-        if (log_info.type === 'notebook' && log_info.notebook_id) {
-          const nb = log_info.notebook_id;
-          if (!nb.includes('Launcher') && !nb.includes('My Dashboard') && !nb.includes('Console')) {
-            notebookMap[nb] = (notebookMap[nb] || 0) + log_info.duration;
-          }
-        }
-      });
-  
-      setLabTime(totalLabTime);
-  
-      const summaryArray = Object.entries(notebookMap)
-        .map(([notebookId, duration]) => ({
-          notebookId,
-          duration
-        }))
-        .sort((a, b) => b.duration - a.duration);
-  
-      setSummaries(summaryArray);
-    }
-  
-    loadData();
-  }, []);
+    console.log("Fetching logs from CodeBench server...");
+    console.log(logs);
 
-  const workData = summaries
-    .map(summary => ({
-      name: summary.notebookId,
-      minutes: parseFloat((summary.duration / 60).toFixed(1))
-    }))
-    .filter(entry => entry.minutes > 0);
+    let totalLabTime = 0;
+    const minutesByName: Record<string, number> = {};
+    const minutesByType: Record<string, number> = {};
+
+    logs.forEach((log: any) => {
+      const { log_info } = log;
+      if (log_info.type === 'window') {
+        totalLabTime += log_info.duration;
+      }
+      if (log_info.type === 'notebook' && log_info.notebook_id) {
+        const name = log_info.name || log_info.notebook_id;
+        const type = log_info.type_detail || log_info.type || 'unknown'; // fallback
+        if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
+          minutesByName[name] = (minutesByName[name] || 0) + log_info.duration;
+          minutesByType[type] = (minutesByType[type] || 0) + log_info.duration;
+        }
+      }
+    });
+
+    setLabTime(totalLabTime);
+
+    // ✅ For summaries table and pie chart by notebook name
+    const summaryArray = Object.entries(minutesByName)
+      .map(([name, duration]) => ({
+        notebookId: name, // ✅ matches your useState type
+        duration
+      }))
+      .sort((a, b) => b.duration - a.duration);
+
+    setSummaries(summaryArray);
+
+    // ✅ For pie chart by notebook type
+    const typeDataArray = Object.entries(minutesByType)
+      .map(([type, duration]) => ({
+        name: type,
+        minutes: parseFloat((duration / 60).toFixed(1))
+      }))
+      .filter(entry => entry.minutes > 0);
+
+    setTypeChartData(typeDataArray);
+  }
+
+  loadData();
+}, []);
+
+// ✅ One clean mapping for notebook pie chart
+const workDataByName = summaries
+  .map(summary => ({
+    name: summary.notebookId,
+    minutes: parseFloat((summary.duration / 60).toFixed(1))
+  }))
+  .filter(entry => entry.minutes > 0);
 
   return (
     <>
@@ -166,10 +182,17 @@ export const MyDashboard = () => {
           )}
         </section>
 
-        <section style={{ marginTop: '1em' }}>
-          <h3>📈 Summary of Work Today</h3>
-           <WorkSummaryChart data={workData as any} />
-        </section>
+        <section style={{ marginTop: '1em', display: 'flex', gap: '1em', flexWrap: 'wrap' }}>
+  <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+    <h3>📈 Time Distribution by Notebook Name</h3>
+    <WorkSummaryChart data={workDataByName as any} />
+  </div>
+  
+  <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+    <h3>📈 Time Distribution by Notebook Type</h3>
+    <WorkSummaryChart data={typeChartData as any} />
+  </div>
+</section>
 
         <section style={{ marginTop: '1em' }}>
           <h3>📈 Engagement Streak</h3>

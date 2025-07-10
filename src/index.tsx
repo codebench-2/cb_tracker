@@ -3,8 +3,8 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-// import { ReactWidget } from '@jupyterlab/apputils';
-// import { ReadingTrackerWidget } from './widgets/ActiveReadingTracker/widgetART';
+import { ReactWidget } from '@jupyterlab/apputils';
+import { ReadingTrackerWidget } from './widgets/ActiveReadingTracker/widgetART';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { NotebookPanel } from '@jupyterlab/notebook';
@@ -180,11 +180,11 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
     console.log('✅ JupyterLab extension cb-tracker is activated!');
   
     // Mount sidebar widget
-    // const widget = ReactWidget.create(<ReadingTrackerWidget />);
-    // widget.id = 'cb-tracker-widget';
-    // widget.title.label = 'Reading Tracker';
-    // widget.title.closable = true;
-    // app.shell.add(widget, 'left');
+    const widget = ReactWidget.create(<ReadingTrackerWidget />);
+    widget.id = 'cb-tracker-widget';
+    widget.title.label = 'Reading Tracker';
+    widget.title.closable = true;
+    app.shell.add(widget, 'left');
 
     // Create the My Dashboard sidebar widget
 const dashboardWidget = new MyDashboardWidget();
