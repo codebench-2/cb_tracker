@@ -1,3 +1,4 @@
+// ConsistencyStreak.tsx
 import React from 'react';
 import { FaFireAlt } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
@@ -49,10 +50,10 @@ export const ConsistencyStreak: React.FC<ConsistencyStreakProps> = ({
       {consistencyScore !== null && isActive ? (
         <div>
           <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-            🔥 {streakDays} Day Streak
+            {streakDays} Day Streak
           </div>
           <div style={{ fontSize: '0.9rem', color: '#555' }}>
-            Score: {consistencyScore.toFixed(1)}/100
+            Score: {consistencyScore.toFixed(1)}
           </div>
         </div>
       ) : (
