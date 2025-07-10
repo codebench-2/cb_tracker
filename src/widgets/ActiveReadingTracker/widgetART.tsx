@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { visitLogs, copyPasteLogs, CopyPasteLog, cellVisitLogs } from '../../index';
 
+
 export const ReadingTrackerWidget = () => {
   const [copyPaste, setCopyPaste] = useState<CopyPasteLog[]>([...copyPasteLogs]);
   const [labActiveTime, setLabActiveTime] = useState<number>(0);
@@ -114,7 +115,7 @@ export const ReadingTrackerWidget = () => {
                     ⏱ Active: {log.activeDuration}s<br />
                     📅 {new Date(log.enter).toLocaleTimeString()} → {new Date(log.leave).toLocaleTimeString()}
 
-                    {/* Cell logs */}
+                    {/*\ Cell logs */}
                     {Object.keys(cellsForNotebook).length > 0 && (
                       <ul style={{ marginTop: '0.3em', paddingLeft: '1em', fontSize: '0.9em' }}>
                         {Object.entries(cellsForNotebook).map(([cellId, duration], cellIdx) => (

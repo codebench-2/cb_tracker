@@ -75,14 +75,7 @@ export const MyDashboard = () => {
     }
 
     loadData();
-  }, []);  
-
-  // For highlight summaries (mock)
-  const highlights = [
-    "Learned how sorting algorithms differ in efficiency.",
-    "Key syntax differences between Python and JavaScript.",
-    "Importance of consistent study habits."
-  ];
+  }, []);
 
   // For summary of work today
   useEffect(() => {
@@ -184,21 +177,6 @@ export const MyDashboard = () => {
           <div style={{ height: '250px' }}>
             <EngagementStreakChart data={dailyActiveMinutes} />
           </div>
-        </section>
-  
-        <section style={{ marginTop: '1em' }}>
-          <h3>🖋️ Highlight Summarization</h3>
-          {highlights.length === 0 ? (
-            <p>No highlights found yet.</p>
-          ) : (
-            <ul style={{ paddingLeft: '1em', fontSize: '0.9em' }}>
-              {highlights.map((hl, idx) => (
-                <li key={idx} style={{ marginBottom: '0.3em' }}>
-                  ✏️ {hl.slice(0, 60)}{hl.length > 60 ? '...' : ''}
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
 
         <section style={{ marginTop: '1em' }}>

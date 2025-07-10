@@ -3,9 +3,8 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-import { ReactWidget } from '@jupyterlab/apputils';
-import { ReadingTrackerWidget } from './widgets/ActiveReadingTracker/widgetART';
-import { AssignmentProgressTracker } from './widgets/AssignmentProgressTracker/widgetAPT';
+// import { ReactWidget } from '@jupyterlab/apputils';
+// import { ReadingTrackerWidget } from './widgets/ActiveReadingTracker/widgetART';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { NotebookPanel } from '@jupyterlab/notebook';
@@ -15,6 +14,7 @@ import { Widget } from '@lumino/widgets';
 import myDashboardPlugin from './myDashboardPlugin';
 import axios from 'axios';
 import { NET_ID, COURSE_ID } from './common/config';
+import { MyDashboardWidget } from './widgets/MyDashboard/myDashboardPlugin';
 
 export async function uploadLogsToCodeBench(payload: { items: any[] }) {
   console.log("🚀 Uploading logs to CodeBench via axios:", payload);
@@ -180,18 +180,21 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
     console.log('✅ JupyterLab extension cb-tracker is activated!');
   
     // Mount sidebar widget
-    const widget = ReactWidget.create(<ReadingTrackerWidget />);
-    widget.id = 'cb-tracker-widget';
-    widget.title.label = 'Reading Tracker';
-    widget.title.closable = true;
-    app.shell.add(widget, 'left');
+    // const widget = ReactWidget.create(<ReadingTrackerWidget />);
+    // widget.id = 'cb-tracker-widget';
+    // widget.title.label = 'Reading Tracker';
+    // widget.title.closable = true;
+    // app.shell.add(widget, 'left');
 
-    // Mount Assignment Progress Tracker
-    const aptWidget = ReactWidget.create(<AssignmentProgressTracker totalTasks={10} />);
-    aptWidget.id = 'assignment-progress-tracker';
-    aptWidget.title.label = 'Assignment Tracker';
-    aptWidget.title.closable = true;
-    app.shell.add(aptWidget, 'left');
+    // Create the My Dashboard sidebar widget
+const dashboardWidget = new MyDashboardWidget();
+dashboardWidget.id = 'my-dashboard-widget';
+dashboardWidget.title.label = 'My Dashboard';
+dashboardWidget.title.iconClass = 'jp-Icon jp-Icon-20 jp-DashboardIcon'; // optional, replace with your icon
+dashboardWidget.title.closable = true;
+
+// Add to the left sidebar
+app.shell.add(dashboardWidget, 'left', { rank: 500 });
 
     // 🪄 Add Assignment Progress Tracker to each notebook's top bar
     app.docRegistry.addWidgetExtension('Notebook', {
@@ -328,7 +331,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
           const notebookPath = panel.context.path; // full file path
           const net_id = NET_ID;
 
-          let course_id = 'ROOT_NOTEBOOKS';
+          let course_id = COURSE_ID;
           const pathParts = notebookPath.split('/');
           
           if (pathParts.length >= 2) {
