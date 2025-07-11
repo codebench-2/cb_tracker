@@ -1,0 +1,2057 @@
+---
+alwaysApply: true
+---
+
+# CB-Server REST API Documentation
+
+A comprehensive REST API for managing students, courses, registrations, notebooks, questions, and logs in the CB-Server system.
+
+## Base URL
+
+All API endpoints are prefixed with `/cb-server/`
+
+**Note:** Replace `8888` in the examples below with your actual JupyterLab port. JupyterLab typically runs on port 8888, but may use a different port (8889, 8890, etc.) if 8888 is already in use.
+
+## Response Format
+
+All responses follow this standard format:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": {}
+}
+```
+
+## Database Schema
+
+### Students
+```json
+{
+  "net_id": "string (Primary Key)",
+  "name": "string",
+  "email": "string"
+}
+```
+
+### Courses
+```json
+{
+  "course_id": "string (Primary Key)",
+  "course_name": "string",
+  "course_description": "string",
+  "course_prerequisites": ["string"],
+  "course_topics": ["string"]
+}
+```
+
+### Registrations
+```json
+{
+  "net_id": "string (FK → Students)",
+  "course_id": "string (FK → Courses)",
+  "section": "string",
+  "topic_scores": [
+    {
+      "name": "string",
+      "score": "double"
+    }
+  ],
+  "consistency_score": "double"
+}
+```
+
+### Notebooks
+```json
+{
+  "notebook_id": "string (Primary Key - file path)",
+  "net_id": "string",
+  "course_id": "string",
+  "name": "string",
+  "type": "string ('activebook' or 'regular')",
+  "topics": ["string"], // Optional for both 'activebook' and 'regular'
+  "last_opened": "timestamp"
+}
+```
+
+### Questions
+```json
+{
+  "question_id": "string (Auto-generated)",
+  "course_id": "string",
+  "notebook_id": "string",
+  "question_asked": "string",
+  "time_stamp": "timestamp"
+}
+```
+
+### Logs
+```json
+{
+  "log_id": "string (Auto-generated)",
+  "net_id": "string",
+  "course_id": "string",
+  "time_stamp": "timestamp",
+  "log_info": {
+    "type": "string (window|notebook|cell|copy_paste)",
+    "notebook_id": "string (not required for 'window')",
+    "cell_id": "string (only required for 'cell')",
+    "pasted_content": "string (only required for 'copy_paste')",
+    "duration": "int (not required for 'copy_paste')"
+  }
+}
+```
+
+### Quiz Questions
+```json
+{
+  "net_id": "string",
+  "course_id": "string",
+  "topic": "string",
+  "questions": ["string"]
+}
+```
+
+## API Endpoints
+
+### 📘 Students
+
+#### GET /cb-server/students
+Get all students
+```bash
+curl -X GET http://localhost:8888/cb-server/students
+```
+
+#### GET /cb-server/students/{net_id}
+Get a specific student
+```bash
+curl -X GET http://localhost:8888/cb-server/students/john123
+```
+
+#### POST /cb-server/students
+Create a new student
+```bash
+curl -X POST http://localhost:8888/cb-server/students \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "name": "John Doe",
+    "email": "john.doe@example.com"
+  }'
+```
+
+#### PUT /cb-server/students/{net_id}
+Update student info
+```bash
+curl -X PUT http://localhost:8888/cb-server/students/john123 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Smith",
+    "email": "john.smith@example.com"
+  }'
+```
+
+#### DELETE /cb-server/students/{net_id}
+Delete a student
+```bash
+curl -X DELETE http://localhost:8888/cb-server/students/john123
+```
+
+### 📗 Courses
+
+#### GET /cb-server/courses
+Get all courses
+
+#### GET /cb-server/courses/{course_id}
+Get a specific course
+
+#### POST /cb-server/courses
+Create a new course
+```bash
+curl -X POST http://localhost:8888/cb-server/courses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "course_id": "CS101",
+    "course_name": "Introduction to Computer Science",
+    "course_description": "Basic concepts of programming",
+    "course_prerequisites": ["MATH101"],
+    "course_topics": ["programming", "algorithms", "data structures"]
+  }'
+```
+
+#### PUT /cb-server/courses/{course_id}
+Update course info
+
+#### DELETE /cb-server/courses/{course_id}
+Delete a course
+
+### 📒 Registrations
+
+#### GET /cb-server/registrations
+Get all registrations
+
+#### GET /cb-server/registrations/{net_id}/{course_id}
+Get a specific registration
+
+#### GET /cb-server/registrations/courses/{course_id}
+Get all students in a course
+
+#### POST /cb-server/registrations
+Register a student to a course
+```bash
+curl -X POST http://localhost:8888/cb-server/registrations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "section": "A1",
+    "topic_scores": [
+      {
+        "name": "programming",
+        "score": 85.5
+      }
+    ],
+    "consistency_score": 78.2
+  }'
+```
+
+#### PUT /cb-server/registrations/{net_id}/{course_id}
+Update registration (topic scores, consistency score)
+
+#### DELETE /cb-server/registrations/{net_id}/{course_id}
+Unregister a student
+
+### 📓 Notebooks
+
+#### Notebook Object
+```json
+{
+  "notebook_id": "string (Primary Key - file path)",
+  "net_id": "string",
+  "course_id": "string",
+  "name": "string",
+  "type": "string ('activebook' or 'regular')",
+  "topics": ["string"], // Optional for both 'activebook' and 'regular'
+  "last_opened": "timestamp"
+}
+```
+
+- `type` must be either `"activebook"` or `"regular"`.
+- For `type: "activebook"`, the `topics` field is **optional** and may be omitted or empty.
+- For `type: "regular"`, the `topics` field is **optional** and may be omitted or empty.
+
+#### POST /cb-server/notebooks
+Create a notebook
+```bash
+curl -X POST http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/notebook.ipynb",
+    "net_id": "john123",
+    "course_id": "CS101",
+    "name": "My First Notebook",
+    "type": "activebook",
+    "topics": ["programming", "python"]
+  }'
+```
+
+```bash
+curl -X POST http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/regular_notebook.ipynb",
+    "net_id": "john123",
+    "course_id": "CS101",
+    "name": "My Regular Notebook",
+    "type": "regular"
+  }'
+```
+
+#### POST /cb-server/notebooks/batch
+Batch create notebooks (see Notebook Object above)
+
+#### GET /cb-server/notebooks
+Get all notebooks
+
+#### GET /cb-server/notebooks/students/{net_id}
+Get all notebooks of a student
+
+#### GET /cb-server/notebooks/course/{course_id}
+Get all notebooks in a course
+
+#### PUT /cb-server/notebooks
+Update a notebook
+```bash
+curl -X PUT http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/notebook.ipynb",
+    "name": "Updated Notebook Name",
+    "topics": ["updated", "topics"]
+  }'
+```
+
+#### DELETE /cb-server/notebooks
+Delete a notebook
+```bash
+curl -X DELETE http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/notebook.ipynb"
+  }'
+```
+
+---
+
+**Validation:**
+- All foreign key references (`net_id`, `course_id`) are validated.
+- `type` and `topics` are validated as described above.
+- Returns `400` for missing/invalid fields, `404` for missing foreign keys, and `201` for successful creation.
+
+### ❓ Questions
+
+#### GET /cb-server/questions
+Get all questions
+
+#### GET /cb-server/questions/{question_id}
+Get a specific question
+
+#### GET /cb-server/questions/course/{course_id}
+Get all questions in a course
+
+#### POST /cb-server/questions
+Add a new question
+```bash
+curl -X POST http://localhost:8888/cb-server/questions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "course_id": "CS101",
+    "notebook_id": "/path/to/notebook.ipynb",
+    "question_asked": "How do I implement a for loop in Python?"
+  }'
+```
+
+#### DELETE /cb-server/questions/{question_id}
+Delete a question
+
+### 📊 Logs
+
+#### GET /cb-server/logs
+Get all logs
+
+#### GET /cb-server/logs/{log_id}
+Get a specific log entry
+
+#### GET /cb-server/logs/student/{net_id}
+Get all logs of a student
+
+#### GET /cb-server/logs/student/{net_id}/type/{type}
+Get logs of a student filtered by type
+
+#### GET /cb-server/logs/course/{course_id}
+Get all logs in a course
+
+#### GET /cb-server/logs/course/{course_id}/type/{type}
+Get logs in a course filtered by type
+
+#### POST /cb-server/logs
+Create a new log entry
+
+**Window Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "window",
+      "duration": 3600
+    }
+  }'
+```
+
+**Notebook Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "notebook",
+      "notebook_id": "/path/to/notebook.ipynb",
+      "duration": 1800
+    }
+  }'
+```
+
+**Cell Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "cell",
+      "notebook_id": "/path/to/notebook.ipynb",
+      "cell_id": "cell-123",
+      "duration": 300
+    }
+  }'
+```
+
+**Copy-Paste Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "copy_paste",
+      "notebook_id": "/path/to/notebook.ipynb",
+      "pasted_content": "print('Hello, World!')"
+    }
+  }'
+```
+
+### 🧠 Quiz Questions
+
+#### GET /cb-server/quiz_questions
+Get all quiz questions
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions
+```
+
+#### GET /cb-server/quiz_questions/student/{net_id}
+Get all quiz questions for a specific student
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions/student/john123
+```
+
+#### GET /cb-server/quiz_questions/course/{course_id}
+Get all quiz questions for a specific course
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions/course/CS101
+```
+
+#### GET /cb-server/quiz_questions/topic/{topic}/student/{net_id}/course/{course_id}
+Get all quiz questions for a specific topic, student, and course
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions/topic/programming/student/john123/course/CS101
+```
+
+**Note:** Returns 404 error if the topic doesn't exist for the specified student and course.
+
+#### POST /cb-server/quiz_questions
+Add a new quiz question
+```bash
+curl -X POST http://localhost:8888/cb-server/quiz_questions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "topic": "programming",
+    "question": "What is the difference between a list and a tuple in Python?"
+  }'
+```
+
+**Note:** The quiz questions collection maintains a maximum of 10 questions per student per topic per course. When adding the 11th question, the oldest question is automatically removed.
+
+## 🚀 Batch Operations
+
+For high-throughput scenarios with many users, batch endpoints are available to create multiple records in a single request. These endpoints are optimized for performance and provide detailed feedback on partial successes/failures.
+
+### Batch Request Format
+
+All batch endpoints follow this structure:
+```json
+{
+  "items": [
+    { /* individual item object */ },
+    { /* individual item object */ },
+    // ... up to 1000 items
+  ]
+}
+```
+
+### Batch Response Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "total_items": 100,
+    "successful_items": 98,
+    "failed_items": 2,
+    "results": [
+      {
+        "index": 0,
+        "success": true,
+        "data": { /* created item */ }
+      },
+      {
+        "index": 5,
+        "success": false,
+        "error": "Validation failed: missing required field"
+      }
+    ]
+  }
+}
+```
+
+### Status Codes for Batch Operations
+
+- **201**: All items created successfully
+- **207**: Partial success (some items succeeded, some failed)
+- **400**: All items failed or invalid request
+
+### 👥 Students Batch
+
+#### POST /cb-server/students/batch
+Create multiple students in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/students/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      {
+        "net_id": "jane456",
+        "name": "Jane Smith", 
+        "email": "jane@example.com"
+      }
+    ]
+  }'
+```
+
+### 📗 Courses Batch
+
+#### POST /cb-server/courses/batch
+Create multiple courses in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/courses/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "course_id": "CS101",
+        "course_name": "Introduction to Computer Science",
+        "course_description": "Basic programming concepts",
+        "course_prerequisites": [],
+        "course_topics": ["programming", "algorithms"]
+      },
+      {
+        "course_id": "CS102",
+        "course_name": "Data Structures",
+        "course_description": "Advanced data structures and algorithms",
+        "course_prerequisites": ["CS101"],
+        "course_topics": ["data structures", "algorithms", "complexity"]
+      }
+    ]
+  }'
+```
+
+### 📒 Registrations Batch
+
+#### POST /cb-server/registrations/batch
+Register multiple students to courses in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/registrations/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "section": "A1",
+        "topic_scores": [
+          {
+            "name": "programming",
+            "score": 85.5
+          }
+        ],
+        "consistency_score": 78.2
+      },
+      {
+        "net_id": "jane456",
+        "course_id": "CS101",
+        "section": "A1",
+        "topic_scores": [],
+        "consistency_score": 0.0
+      }
+    ]
+  }'
+```
+
+### 📓 Notebooks Batch
+
+#### POST /cb-server/notebooks/batch
+Create multiple notebooks in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/notebooks/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "notebook_id": "/path/to/notebook1.ipynb",
+        "net_id": "john123",
+        "course_id": "CS101",
+        "name": "Assignment 1",
+        "topics": ["programming", "python"]
+      },
+      {
+        "notebook_id": "/path/to/notebook2.ipynb",
+        "net_id": "john123",
+        "course_id": "CS101",
+        "name": "Lab Exercise 1",
+        "topics": ["data structures"]
+      }
+    ]
+  }'
+```
+
+### ❓ Questions Batch
+
+#### POST /cb-server/questions/batch
+Create multiple questions in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/questions/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "course_id": "CS101",
+        "notebook_id": "/path/to/notebook1.ipynb",
+        "question_asked": "How do I implement a for loop in Python?"
+      },
+      {
+        "course_id": "CS101",
+        "notebook_id": "/path/to/notebook1.ipynb",
+        "question_asked": "What is the difference between lists and tuples?"
+      }
+    ]
+  }'
+```
+
+### 📊 Logs Batch
+
+#### POST /cb-server/logs/batch
+Create multiple log entries in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/logs/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "log_info": {
+          "type": "window",
+          "duration": 3600
+        }
+      },
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "log_info": {
+          "type": "notebook",
+          "notebook_id": "/path/to/notebook.ipynb",
+          "duration": 1800
+        }
+      },
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "log_info": {
+          "type": "cell",
+          "notebook_id": "/path/to/notebook.ipynb",
+          "cell_id": "cell-123",
+          "duration": 300
+        }
+      }
+    ]
+  }'
+```
+
+### 🧠 Quiz Questions Batch
+
+#### POST /cb-server/quiz_questions/batch
+Add multiple quiz questions in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/quiz_questions/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "topic": "programming",
+        "question": "What is the difference between a list and a tuple in Python?"
+      },
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "topic": "algorithms",
+        "question": "How does bubble sort work?"
+      }
+    ]
+  }'
+```
+
+## 📊 Score Management Endpoints
+
+### Topic Scores
+
+#### PUT /cb-server/topic_scores/student/{net_id}/course/{course_id}/topic/{topic_name}
+Update or create a specific topic score for a student in a course
+
+**Requirements:**
+- Student must be registered for the course
+- Score must be between 0-10
+- Creates new topic score if doesn't exist, updates if exists
+
+```bash
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/john123/course/CS101/topic/variables \
+  -H "Content-Type: application/json" \
+  -d '{
+    "score": 8.5
+  }'
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123",
+    "course_id": "CS101", 
+    "topic_name": "variables",
+    "score": 8.5,
+    "topic_scores": [
+      {"name": "variables", "score": 8.5},
+      {"name": "loops", "score": 7.0}
+    ]
+  },
+  "error": {}
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid score range or missing score field
+- `404 Not Found`: Student is not registered for the course
+
+#### GET /cb-server/topic_scores/student/{net_id}/course/{course_id}/
+Get all topic scores for a student in a course
+
+```bash
+curl -X GET http://localhost:8888/cb-server/topic_scores/student/john123/course/CS101/
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123",
+    "course_id": "CS101",
+    "topic_scores": [
+      {"name": "variables", "score": 8.5},
+      {"name": "loops", "score": 7.0},
+      {"name": "functions", "score": 9.2}
+    ]
+  },
+  "error": {}
+}
+```
+
+**Error Response:**
+- `404 Not Found`: Student is not registered for the course
+
+### Consistency Scores
+
+#### PUT /cb-server/consistency_score/student/{net_id}/course/{course_id}/
+Update the consistency score for a student in a course
+
+**Requirements:**
+- Student must be registered for the course
+- Consistency score must be between 0-10
+
+```bash
+curl -X PUT http://localhost:8888/cb-server/consistency_score/student/john123/course/CS101/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "consistency_score": 6.5
+  }'
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123",
+    "course_id": "CS101",
+    "consistency_score": 6.5
+  },
+  "error": {}
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid score range or missing consistency_score field
+- `404 Not Found`: Student is not registered for the course
+
+#### GET /cb-server/consistency_score/student/{net_id}/course/{course_id}/
+Get the consistency score for a student in a course
+
+```bash
+curl -X GET http://localhost:8888/cb-server/consistency_score/student/john123/course/CS101/
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123", 
+    "course_id": "CS101",
+    "consistency_score": 6.5
+  },
+  "error": {}
+}
+```
+
+**Error Response:**
+- `404 Not Found`: Student is not registered for the course
+
+### Score Management Examples
+
+#### Complete Workflow Example
+```bash
+# 1. First register a student for a course
+curl -X POST http://localhost:8888/cb-server/registrations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "alice789",
+    "course_id": "CS101", 
+    "section": "A1"
+  }'
+
+# 2. Update topic scores individually
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/topic/variables \
+  -H "Content-Type: application/json" \
+  -d '{"score": 9.0}'
+
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/topic/loops \
+  -H "Content-Type: application/json" \
+  -d '{"score": 8.5}'
+
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/topic/functions \
+  -H "Content-Type: application/json" \
+  -d '{"score": 9.5}'
+
+# 3. Update consistency score
+curl -X PUT http://localhost:8888/cb-server/consistency_score/student/alice789/course/CS101/ \
+  -H "Content-Type: application/json" \
+  -d '{"consistency_score": 8.8}'
+
+# 4. Retrieve all topic scores
+curl -X GET http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/
+
+# 5. Retrieve consistency score  
+curl -X GET http://localhost:8888/cb-server/consistency_score/student/alice789/course/CS101/
+```
+
+## Error Handling
+
+The API returns appropriate HTTP status codes:
+
+- `200 OK` - Success
+- `201 Created` - Resource created successfully
+- `400 Bad Request` - Invalid request data
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Resource already exists
+- `500 Internal Server Error` - Server error
+
+Error responses include details in the `error` field:
+
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Missing required fields: net_id, name"
+}
+```
+
+### Schema Validation Errors
+
+The API uses MongoDB JSON Schema validation to ensure data integrity. Common validation errors include:
+
+**Missing Required Fields:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Document failed validation, full error: {'index': 0, 'code': 121, 'errmsg': 'Document failed validation', 'errInfo': {'failingDocumentId': ObjectId('...'), 'details': {'operatorName': '$jsonSchema', 'schemaRulesNotSatisfied': [{'operatorName': 'required', 'missingProperties': ['name']}]}}}"
+}
+```
+
+**Invalid Data Types:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Document failed validation - score must be a number between 0-10"
+}
+```
+
+**Pattern Violations:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Document failed validation - net_id must contain only alphanumeric characters, hyphens, and underscores"
+}
+```
+
+**Duplicate Key Errors:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "E11000 duplicate key error collection: cb-ext.students index: net_id_1 dup key: { net_id: \"john123\" }"
+}
+```
+
+## Validation Rules
+
+The API enforces validation at two levels:
+1. **Application-level validation** in the request handlers
+2. **Database-level validation** using MongoDB JSON Schema (recommended setup)
+
+### Database Schema Validation
+
+When properly set up (using `setup_database()` from `cb_server.setup_db`), MongoDB automatically validates all data according to strict JSON schemas:
+
+### Students
+- `net_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `name`: Required, non-empty string (minimum length: 1)
+- `email`: Required, valid email format (pattern: `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+
+### Courses
+- `course_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_name`: Required, non-empty string (minimum length: 1)
+- `course_description`: Required, non-empty string (minimum length: 1)
+- `course_prerequisites`: Optional array of strings
+- `course_topics`: Optional array of strings
+
+### Registrations
+- `net_id`: Required, must reference existing student (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required, must reference existing course (pattern: `^[a-zA-Z0-9_-]+$`)
+- `section`: Required, non-empty string (minimum length: 1)
+- `topic_scores`: Optional array of objects with:
+  - `name`: Required string (minimum length: 1)
+  - `score`: Required number between 0-10 (inclusive)
+- `consistency_score`: Optional number between 0-10 (inclusive)
+
+### Notebooks
+- `notebook_id`: Required, typically file path (minimum length: 1)
+- `net_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `name`: Required, non-empty string (minimum length: 1)
+- `type`: Required, must be one of: `"activebook"` or `"regular"`
+- `topics`: Optional array of strings (optional for both `"activebook"` and `"regular"`)
+- `last_opened`: Optional timestamp (BSON date)
+
+### Questions
+- `question_id`: Auto-generated unique identifier
+- `course_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `notebook_id`: Required (minimum length: 1)
+- `question_asked`: Required, non-empty string (minimum length: 1)
+- `time_stamp`: Auto-generated timestamp (BSON date)
+
+### Logs
+- `log_id`: Auto-generated unique identifier
+- `net_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `time_stamp`: Auto-generated timestamp (BSON date)
+- `log_info.type`: Required, must be one of: `window`, `notebook`, `cell`, `copy_paste`
+- `log_info.notebook_id`: Required for types `notebook`, `cell`, `copy_paste`
+- `log_info.cell_id`: Required only for type `cell`
+- `log_info.pasted_content`: Required only for type `copy_paste`
+- `log_info.duration`: Required for types `window`, `notebook`, `cell` (integer)
+
+### Quiz Questions
+- `net_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `topic`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `questions`: Array of strings (minimum length: 1 per question)
+- Maximum 10 questions per student per topic per course (oldest questions automatically removed)
+
+## Installation & Setup
+
+1. **Database**: Ensure MongoDB is running on `localhost:27017`
+2. **Dependencies**: Install the extension with pymongo dependency
+3. **Schema Setup** (Recommended): Run database setup for validation and indexes:
+   ```python
+   from cb_server.setup_db import setup_database
+   setup_database()
+   ```
+4. **Start JupyterLab**: Launch JupyterLab to activate the extension
+5. **Verify**: API will be available at `/cb-server/*` endpoints
+
+### Database Setup Benefits
+
+Running the setup provides:
+- **JSON Schema Validation**: Automatic data validation at database level
+- **Performance Indexes**: Optimized queries and unique constraints  
+- **Data Integrity**: Prevents invalid data from corrupting the database
+- **Better Error Messages**: Clear validation failure details
+
+## Performance Considerations
+
+The API includes database indexes for optimal performance:
+- Unique indexes on primary keys
+- Compound indexes for common query patterns
+- Text indexes for search functionality
+
+## Security Notes
+
+- All endpoints are currently public (no authentication)
+- Input validation and sanitization is implemented
+- SQL injection protection through parameterized queries
+- XSS protection through JSON encoding # CB-Server REST API Documentation
+
+A comprehensive REST API for managing students, courses, registrations, notebooks, questions, and logs in the CB-Server system.
+
+## Base URL
+
+All API endpoints are prefixed with `/cb-server/`
+
+**Note:** Replace `8888` in the examples below with your actual JupyterLab port. JupyterLab typically runs on port 8888, but may use a different port (8889, 8890, etc.) if 8888 is already in use.
+
+## Response Format
+
+All responses follow this standard format:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": {}
+}
+```
+
+## Database Schema
+
+### Students
+```json
+{
+  "net_id": "string (Primary Key)",
+  "name": "string",
+  "email": "string"
+}
+```
+
+### Courses
+```json
+{
+  "course_id": "string (Primary Key)",
+  "course_name": "string",
+  "course_description": "string",
+  "course_prerequisites": ["string"],
+  "course_topics": ["string"]
+}
+```
+
+### Registrations
+```json
+{
+  "net_id": "string (FK → Students)",
+  "course_id": "string (FK → Courses)",
+  "section": "string",
+  "topic_scores": [
+    {
+      "name": "string",
+      "score": "double"
+    }
+  ],
+  "consistency_score": "double"
+}
+```
+
+### Notebooks
+```json
+{
+  "notebook_id": "string (Primary Key - file path)",
+  "net_id": "string",
+  "course_id": "string",
+  "name": "string",
+  "type": "string ('activebook' or 'regular')",
+  "topics": ["string"], // Optional for both 'activebook' and 'regular'
+  "last_opened": "timestamp"
+}
+```
+
+### Questions
+```json
+{
+  "question_id": "string (Auto-generated)",
+  "course_id": "string",
+  "notebook_id": "string",
+  "question_asked": "string",
+  "time_stamp": "timestamp"
+}
+```
+
+### Logs
+```json
+{
+  "log_id": "string (Auto-generated)",
+  "net_id": "string",
+  "course_id": "string",
+  "time_stamp": "timestamp",
+  "log_info": {
+    "type": "string (window|notebook|cell|copy_paste)",
+    "notebook_id": "string (not required for 'window')",
+    "cell_id": "string (only required for 'cell')",
+    "pasted_content": "string (only required for 'copy_paste')",
+    "duration": "int (not required for 'copy_paste')"
+  }
+}
+```
+
+### Quiz Questions
+```json
+{
+  "net_id": "string",
+  "course_id": "string",
+  "topic": "string",
+  "questions": ["string"]
+}
+```
+
+## API Endpoints
+
+### 📘 Students
+
+#### GET /cb-server/students
+Get all students
+```bash
+curl -X GET http://localhost:8888/cb-server/students
+```
+
+#### GET /cb-server/students/{net_id}
+Get a specific student
+```bash
+curl -X GET http://localhost:8888/cb-server/students/john123
+```
+
+#### POST /cb-server/students
+Create a new student
+```bash
+curl -X POST http://localhost:8888/cb-server/students \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "name": "John Doe",
+    "email": "john.doe@example.com"
+  }'
+```
+
+#### PUT /cb-server/students/{net_id}
+Update student info
+```bash
+curl -X PUT http://localhost:8888/cb-server/students/john123 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Smith",
+    "email": "john.smith@example.com"
+  }'
+```
+
+#### DELETE /cb-server/students/{net_id}
+Delete a student
+```bash
+curl -X DELETE http://localhost:8888/cb-server/students/john123
+```
+
+### 📗 Courses
+
+#### GET /cb-server/courses
+Get all courses
+
+#### GET /cb-server/courses/{course_id}
+Get a specific course
+
+#### POST /cb-server/courses
+Create a new course
+```bash
+curl -X POST http://localhost:8888/cb-server/courses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "course_id": "CS101",
+    "course_name": "Introduction to Computer Science",
+    "course_description": "Basic concepts of programming",
+    "course_prerequisites": ["MATH101"],
+    "course_topics": ["programming", "algorithms", "data structures"]
+  }'
+```
+
+#### PUT /cb-server/courses/{course_id}
+Update course info
+
+#### DELETE /cb-server/courses/{course_id}
+Delete a course
+
+### 📒 Registrations
+
+#### GET /cb-server/registrations
+Get all registrations
+
+#### GET /cb-server/registrations/{net_id}/{course_id}
+Get a specific registration
+
+#### GET /cb-server/registrations/courses/{course_id}
+Get all students in a course
+
+#### POST /cb-server/registrations
+Register a student to a course
+```bash
+curl -X POST http://localhost:8888/cb-server/registrations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "section": "A1",
+    "topic_scores": [
+      {
+        "name": "programming",
+        "score": 85.5
+      }
+    ],
+    "consistency_score": 78.2
+  }'
+```
+
+#### PUT /cb-server/registrations/{net_id}/{course_id}
+Update registration (topic scores, consistency score)
+
+#### DELETE /cb-server/registrations/{net_id}/{course_id}
+Unregister a student
+
+### 📓 Notebooks
+
+#### Notebook Object
+```json
+{
+  "notebook_id": "string (Primary Key - file path)",
+  "net_id": "string",
+  "course_id": "string",
+  "name": "string",
+  "type": "string ('activebook' or 'regular')",
+  "topics": ["string"], // Optional for both 'activebook' and 'regular'
+  "last_opened": "timestamp"
+}
+```
+
+- `type` must be either `"activebook"` or `"regular"`.
+- For `type: "activebook"`, the `topics` field is **optional** and may be omitted or empty.
+- For `type: "regular"`, the `topics` field is **optional** and may be omitted or empty.
+
+#### POST /cb-server/notebooks
+Create a notebook
+```bash
+curl -X POST http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/notebook.ipynb",
+    "net_id": "john123",
+    "course_id": "CS101",
+    "name": "My First Notebook",
+    "type": "activebook",
+    "topics": ["programming", "python"]
+  }'
+```
+
+```bash
+curl -X POST http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/regular_notebook.ipynb",
+    "net_id": "john123",
+    "course_id": "CS101",
+    "name": "My Regular Notebook",
+    "type": "regular"
+  }'
+```
+
+#### POST /cb-server/notebooks/batch
+Batch create notebooks (see Notebook Object above)
+
+#### GET /cb-server/notebooks
+Get all notebooks
+
+#### GET /cb-server/notebooks/students/{net_id}
+Get all notebooks of a student
+
+#### GET /cb-server/notebooks/course/{course_id}
+Get all notebooks in a course
+
+#### PUT /cb-server/notebooks
+Update a notebook
+```bash
+curl -X PUT http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/notebook.ipynb",
+    "name": "Updated Notebook Name",
+    "topics": ["updated", "topics"]
+  }'
+```
+
+#### DELETE /cb-server/notebooks
+Delete a notebook
+```bash
+curl -X DELETE http://localhost:8888/cb-server/notebooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notebook_id": "/path/to/notebook.ipynb"
+  }'
+```
+
+---
+
+**Validation:**
+- All foreign key references (`net_id`, `course_id`) are validated.
+- `type` and `topics` are validated as described above.
+- Returns `400` for missing/invalid fields, `404` for missing foreign keys, and `201` for successful creation.
+
+### ❓ Questions
+
+#### GET /cb-server/questions
+Get all questions
+
+#### GET /cb-server/questions/{question_id}
+Get a specific question
+
+#### GET /cb-server/questions/course/{course_id}
+Get all questions in a course
+
+#### POST /cb-server/questions
+Add a new question
+```bash
+curl -X POST http://localhost:8888/cb-server/questions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "course_id": "CS101",
+    "notebook_id": "/path/to/notebook.ipynb",
+    "question_asked": "How do I implement a for loop in Python?"
+  }'
+```
+
+#### DELETE /cb-server/questions/{question_id}
+Delete a question
+
+### 📊 Logs
+
+#### GET /cb-server/logs
+Get all logs
+
+#### GET /cb-server/logs/{log_id}
+Get a specific log entry
+
+#### GET /cb-server/logs/student/{net_id}
+Get all logs of a student
+
+#### GET /cb-server/logs/student/{net_id}/type/{type}
+Get logs of a student filtered by type
+
+#### GET /cb-server/logs/course/{course_id}
+Get all logs in a course
+
+#### GET /cb-server/logs/course/{course_id}/type/{type}
+Get logs in a course filtered by type
+
+#### POST /cb-server/logs
+Create a new log entry
+
+**Window Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "window",
+      "duration": 3600
+    }
+  }'
+```
+
+**Notebook Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "notebook",
+      "notebook_id": "/path/to/notebook.ipynb",
+      "duration": 1800
+    }
+  }'
+```
+
+**Cell Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "cell",
+      "notebook_id": "/path/to/notebook.ipynb",
+      "cell_id": "cell-123",
+      "duration": 300
+    }
+  }'
+```
+
+**Copy-Paste Log Example:**
+```bash
+curl -X POST http://localhost:8888/cb-server/logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "log_info": {
+      "type": "copy_paste",
+      "notebook_id": "/path/to/notebook.ipynb",
+      "pasted_content": "print('Hello, World!')"
+    }
+  }'
+```
+
+### 🧠 Quiz Questions
+
+#### GET /cb-server/quiz_questions
+Get all quiz questions
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions
+```
+
+#### GET /cb-server/quiz_questions/student/{net_id}
+Get all quiz questions for a specific student
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions/student/john123
+```
+
+#### GET /cb-server/quiz_questions/course/{course_id}
+Get all quiz questions for a specific course
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions/course/CS101
+```
+
+#### GET /cb-server/quiz_questions/topic/{topic}/student/{net_id}/course/{course_id}
+Get all quiz questions for a specific topic, student, and course
+```bash
+curl -X GET http://localhost:8888/cb-server/quiz_questions/topic/programming/student/john123/course/CS101
+```
+
+**Note:** Returns 404 error if the topic doesn't exist for the specified student and course.
+
+#### POST /cb-server/quiz_questions
+Add a new quiz question
+```bash
+curl -X POST http://localhost:8888/cb-server/quiz_questions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "john123",
+    "course_id": "CS101",
+    "topic": "programming",
+    "question": "What is the difference between a list and a tuple in Python?"
+  }'
+```
+
+**Note:** The quiz questions collection maintains a maximum of 10 questions per student per topic per course. When adding the 11th question, the oldest question is automatically removed.
+
+## 🚀 Batch Operations
+
+For high-throughput scenarios with many users, batch endpoints are available to create multiple records in a single request. These endpoints are optimized for performance and provide detailed feedback on partial successes/failures.
+
+### Batch Request Format
+
+All batch endpoints follow this structure:
+```json
+{
+  "items": [
+    { /* individual item object */ },
+    { /* individual item object */ },
+    // ... up to 1000 items
+  ]
+}
+```
+
+### Batch Response Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "total_items": 100,
+    "successful_items": 98,
+    "failed_items": 2,
+    "results": [
+      {
+        "index": 0,
+        "success": true,
+        "data": { /* created item */ }
+      },
+      {
+        "index": 5,
+        "success": false,
+        "error": "Validation failed: missing required field"
+      }
+    ]
+  }
+}
+```
+
+### Status Codes for Batch Operations
+
+- **201**: All items created successfully
+- **207**: Partial success (some items succeeded, some failed)
+- **400**: All items failed or invalid request
+
+### 👥 Students Batch
+
+#### POST /cb-server/students/batch
+Create multiple students in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/students/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      {
+        "net_id": "jane456",
+        "name": "Jane Smith", 
+        "email": "jane@example.com"
+      }
+    ]
+  }'
+```
+
+### 📗 Courses Batch
+
+#### POST /cb-server/courses/batch
+Create multiple courses in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/courses/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "course_id": "CS101",
+        "course_name": "Introduction to Computer Science",
+        "course_description": "Basic programming concepts",
+        "course_prerequisites": [],
+        "course_topics": ["programming", "algorithms"]
+      },
+      {
+        "course_id": "CS102",
+        "course_name": "Data Structures",
+        "course_description": "Advanced data structures and algorithms",
+        "course_prerequisites": ["CS101"],
+        "course_topics": ["data structures", "algorithms", "complexity"]
+      }
+    ]
+  }'
+```
+
+### 📒 Registrations Batch
+
+#### POST /cb-server/registrations/batch
+Register multiple students to courses in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/registrations/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "section": "A1",
+        "topic_scores": [
+          {
+            "name": "programming",
+            "score": 85.5
+          }
+        ],
+        "consistency_score": 78.2
+      },
+      {
+        "net_id": "jane456",
+        "course_id": "CS101",
+        "section": "A1",
+        "topic_scores": [],
+        "consistency_score": 0.0
+      }
+    ]
+  }'
+```
+
+### 📓 Notebooks Batch
+
+#### POST /cb-server/notebooks/batch
+Create multiple notebooks in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/notebooks/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "notebook_id": "/path/to/notebook1.ipynb",
+        "net_id": "john123",
+        "course_id": "CS101",
+        "name": "Assignment 1",
+        "topics": ["programming", "python"]
+      },
+      {
+        "notebook_id": "/path/to/notebook2.ipynb",
+        "net_id": "john123",
+        "course_id": "CS101",
+        "name": "Lab Exercise 1",
+        "topics": ["data structures"]
+      }
+    ]
+  }'
+```
+
+### ❓ Questions Batch
+
+#### POST /cb-server/questions/batch
+Create multiple questions in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/questions/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "course_id": "CS101",
+        "notebook_id": "/path/to/notebook1.ipynb",
+        "question_asked": "How do I implement a for loop in Python?"
+      },
+      {
+        "course_id": "CS101",
+        "notebook_id": "/path/to/notebook1.ipynb",
+        "question_asked": "What is the difference between lists and tuples?"
+      }
+    ]
+  }'
+```
+
+### 📊 Logs Batch
+
+#### POST /cb-server/logs/batch
+Create multiple log entries in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/logs/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "log_info": {
+          "type": "window",
+          "duration": 3600
+        }
+      },
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "log_info": {
+          "type": "notebook",
+          "notebook_id": "/path/to/notebook.ipynb",
+          "duration": 1800
+        }
+      },
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "log_info": {
+          "type": "cell",
+          "notebook_id": "/path/to/notebook.ipynb",
+          "cell_id": "cell-123",
+          "duration": 300
+        }
+      }
+    ]
+  }'
+```
+
+### 🧠 Quiz Questions Batch
+
+#### POST /cb-server/quiz_questions/batch
+Add multiple quiz questions in one request
+```bash
+curl -X POST http://localhost:8888/cb-server/quiz_questions/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "topic": "programming",
+        "question": "What is the difference between a list and a tuple in Python?"
+      },
+      {
+        "net_id": "john123",
+        "course_id": "CS101",
+        "topic": "algorithms",
+        "question": "How does bubble sort work?"
+      }
+    ]
+  }'
+```
+
+## 📊 Score Management Endpoints
+
+### Topic Scores
+
+#### PUT /cb-server/topic_scores/student/{net_id}/course/{course_id}/topic/{topic_name}
+Update or create a specific topic score for a student in a course
+
+**Requirements:**
+- Student must be registered for the course
+- Score must be between 0-10
+- Creates new topic score if doesn't exist, updates if exists
+
+```bash
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/john123/course/CS101/topic/variables \
+  -H "Content-Type: application/json" \
+  -d '{
+    "score": 8.5
+  }'
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123",
+    "course_id": "CS101", 
+    "topic_name": "variables",
+    "score": 8.5,
+    "topic_scores": [
+      {"name": "variables", "score": 8.5},
+      {"name": "loops", "score": 7.0}
+    ]
+  },
+  "error": {}
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid score range or missing score field
+- `404 Not Found`: Student is not registered for the course
+
+#### GET /cb-server/topic_scores/student/{net_id}/course/{course_id}/
+Get all topic scores for a student in a course
+
+```bash
+curl -X GET http://localhost:8888/cb-server/topic_scores/student/john123/course/CS101/
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123",
+    "course_id": "CS101",
+    "topic_scores": [
+      {"name": "variables", "score": 8.5},
+      {"name": "loops", "score": 7.0},
+      {"name": "functions", "score": 9.2}
+    ]
+  },
+  "error": {}
+}
+```
+
+**Error Response:**
+- `404 Not Found`: Student is not registered for the course
+
+### Consistency Scores
+
+#### PUT /cb-server/consistency_score/student/{net_id}/course/{course_id}/
+Update the consistency score for a student in a course
+
+**Requirements:**
+- Student must be registered for the course
+- Consistency score must be between 0-10
+
+```bash
+curl -X PUT http://localhost:8888/cb-server/consistency_score/student/john123/course/CS101/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "consistency_score": 6.5
+  }'
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123",
+    "course_id": "CS101",
+    "consistency_score": 6.5
+  },
+  "error": {}
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid score range or missing consistency_score field
+- `404 Not Found`: Student is not registered for the course
+
+#### GET /cb-server/consistency_score/student/{net_id}/course/{course_id}/
+Get the consistency score for a student in a course
+
+```bash
+curl -X GET http://localhost:8888/cb-server/consistency_score/student/john123/course/CS101/
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "net_id": "john123", 
+    "course_id": "CS101",
+    "consistency_score": 6.5
+  },
+  "error": {}
+}
+```
+
+**Error Response:**
+- `404 Not Found`: Student is not registered for the course
+
+### Score Management Examples
+
+#### Complete Workflow Example
+```bash
+# 1. First register a student for a course
+curl -X POST http://localhost:8888/cb-server/registrations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "net_id": "alice789",
+    "course_id": "CS101", 
+    "section": "A1"
+  }'
+
+# 2. Update topic scores individually
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/topic/variables \
+  -H "Content-Type: application/json" \
+  -d '{"score": 9.0}'
+
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/topic/loops \
+  -H "Content-Type: application/json" \
+  -d '{"score": 8.5}'
+
+curl -X PUT http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/topic/functions \
+  -H "Content-Type: application/json" \
+  -d '{"score": 9.5}'
+
+# 3. Update consistency score
+curl -X PUT http://localhost:8888/cb-server/consistency_score/student/alice789/course/CS101/ \
+  -H "Content-Type: application/json" \
+  -d '{"consistency_score": 8.8}'
+
+# 4. Retrieve all topic scores
+curl -X GET http://localhost:8888/cb-server/topic_scores/student/alice789/course/CS101/
+
+# 5. Retrieve consistency score  
+curl -X GET http://localhost:8888/cb-server/consistency_score/student/alice789/course/CS101/
+```
+
+## Error Handling
+
+The API returns appropriate HTTP status codes:
+
+- `200 OK` - Success
+- `201 Created` - Resource created successfully
+- `400 Bad Request` - Invalid request data
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Resource already exists
+- `500 Internal Server Error` - Server error
+
+Error responses include details in the `error` field:
+
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Missing required fields: net_id, name"
+}
+```
+
+### Schema Validation Errors
+
+The API uses MongoDB JSON Schema validation to ensure data integrity. Common validation errors include:
+
+**Missing Required Fields:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Document failed validation, full error: {'index': 0, 'code': 121, 'errmsg': 'Document failed validation', 'errInfo': {'failingDocumentId': ObjectId('...'), 'details': {'operatorName': '$jsonSchema', 'schemaRulesNotSatisfied': [{'operatorName': 'required', 'missingProperties': ['name']}]}}}"
+}
+```
+
+**Invalid Data Types:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Document failed validation - score must be a number between 0-10"
+}
+```
+
+**Pattern Violations:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "Document failed validation - net_id must contain only alphanumeric characters, hyphens, and underscores"
+}
+```
+
+**Duplicate Key Errors:**
+```json
+{
+  "success": false,
+  "data": {},
+  "error": "E11000 duplicate key error collection: cb-ext.students index: net_id_1 dup key: { net_id: \"john123\" }"
+}
+```
+
+## Validation Rules
+
+The API enforces validation at two levels:
+1. **Application-level validation** in the request handlers
+2. **Database-level validation** using MongoDB JSON Schema (recommended setup)
+
+### Database Schema Validation
+
+When properly set up (using `setup_database()` from `cb_server.setup_db`), MongoDB automatically validates all data according to strict JSON schemas:
+
+### Students
+- `net_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `name`: Required, non-empty string (minimum length: 1)
+- `email`: Required, valid email format (pattern: `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+
+### Courses
+- `course_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_name`: Required, non-empty string (minimum length: 1)
+- `course_description`: Required, non-empty string (minimum length: 1)
+- `course_prerequisites`: Optional array of strings
+- `course_topics`: Optional array of strings
+
+### Registrations
+- `net_id`: Required, must reference existing student (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required, must reference existing course (pattern: `^[a-zA-Z0-9_-]+$`)
+- `section`: Required, non-empty string (minimum length: 1)
+- `topic_scores`: Optional array of objects with:
+  - `name`: Required string (minimum length: 1)
+  - `score`: Required number between 0-10 (inclusive)
+- `consistency_score`: Optional number between 0-10 (inclusive)
+
+### Notebooks
+- `notebook_id`: Required, typically file path (minimum length: 1)
+- `net_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `name`: Required, non-empty string (minimum length: 1)
+- `type`: Required, must be one of: `"activebook"` or `"regular"`
+- `topics`: Optional array of strings (optional for both `"activebook"` and `"regular"`)
+- `last_opened`: Optional timestamp (BSON date)
+
+### Questions
+- `question_id`: Auto-generated unique identifier
+- `course_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `notebook_id`: Required (minimum length: 1)
+- `question_asked`: Required, non-empty string (minimum length: 1)
+- `time_stamp`: Auto-generated timestamp (BSON date)
+
+### Logs
+- `log_id`: Auto-generated unique identifier
+- `net_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required (pattern: `^[a-zA-Z0-9_-]+$`)
+- `time_stamp`: Auto-generated timestamp (BSON date)
+- `log_info.type`: Required, must be one of: `window`, `notebook`, `cell`, `copy_paste`
+- `log_info.notebook_id`: Required for types `notebook`, `cell`, `copy_paste`
+- `log_info.cell_id`: Required only for type `cell`
+- `log_info.pasted_content`: Required only for type `copy_paste`
+- `log_info.duration`: Required for types `window`, `notebook`, `cell` (integer)
+
+### Quiz Questions
+- `net_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `course_id`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `topic`: Required, alphanumeric with hyphens/underscores allowed (pattern: `^[a-zA-Z0-9_-]+$`)
+- `questions`: Array of strings (minimum length: 1 per question)
+- Maximum 10 questions per student per topic per course (oldest questions automatically removed)
+
+## Installation & Setup
+
+1. **Database**: Ensure MongoDB is running on `localhost:27017`
+2. **Dependencies**: Install the extension with pymongo dependency
+3. **Schema Setup** (Recommended): Run database setup for validation and indexes:
+   ```python
+   from cb_server.setup_db import setup_database
+   setup_database()
+   ```
+4. **Start JupyterLab**: Launch JupyterLab to activate the extension
+5. **Verify**: API will be available at `/cb-server/*` endpoints
+
+### Database Setup Benefits
+
+Running the setup provides:
+- **JSON Schema Validation**: Automatic data validation at database level
+- **Performance Indexes**: Optimized queries and unique constraints  
+- **Data Integrity**: Prevents invalid data from corrupting the database
+- **Better Error Messages**: Clear validation failure details
+
+## Performance Considerations
+
+The API includes database indexes for optimal performance:
+- Unique indexes on primary keys
+- Compound indexes for common query patterns
+- Text indexes for search functionality
+
+## Security Notes
+
+- All endpoints are currently public (no authentication)
+- Input validation and sanitization is implemented
+- SQL injection protection through parameterized queries
+- XSS protection through JSON encoding 

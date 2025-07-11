@@ -23,8 +23,20 @@ export async function uploadLogsToCodeBench(payload: { items: any[] }) {
     type CodeBenchResponse = {
       success: boolean;
       error?: any;
+      data?: {
+        total_items?: number;
+        successful_items?: number;
+        failed_items?: number;
+        results?: Array<{
+          index: number;
+          success: boolean;
+          data?: any;
+          error?: string;
+        }>;
+      };
       [key: string]: any;
     };
+    
     const response = await axios.post<CodeBenchResponse>('http://localhost:8888/cb-server/logs/batch', payload, {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -33,12 +45,152 @@ export async function uploadLogsToCodeBench(payload: { items: any[] }) {
 
     if (!response.data.success) {
       console.error("❌ CodeBench reported failure:", response.data.error);
+      return { success: false, error: response.data.error };
     }
+
+    // Handle partial success in batch operations
+    if (response.data.data && response.data.data.failed_items && response.data.data.failed_items > 0) {
+      console.warn(`⚠️ Partial success: ${response.data.data.successful_items} succeeded, ${response.data.data.failed_items} failed`);
+      
+      // Process failed items to retry with notebook creation
+      if (response.data.data.results) {
+        const failedItems = response.data.data.results.filter(result => !result.success);
+        await handleFailedLogItems(failedItems, payload.items);
+      }
+    }
+
+    return { success: true, data: response.data.data };
   } catch (error) {
     console.error("❌ Upload to CodeBench failed:", error);
     if (error && typeof error === 'object' && 'isAxiosError' in error) {
-      console.error("Axios error details:", (error as any).response?.data || (error as any).message);
+      const axiosError = error as any;
+      console.error("Axios error details:", axiosError.response?.data || axiosError.message);
+      
+      // If it's a 404 error, it might be due to missing notebook
+      if (axiosError.response?.status === 404) {
+        console.log("🔄 404 error detected, attempting to create missing notebooks and retry...");
+        await handleMissingNotebooks(payload.items);
+      }
     }
+    return { success: false, error };
+  }
+}
+
+/**
+ * Handle failed log items by checking if they failed due to missing notebooks
+ */
+async function handleFailedLogItems(failedResults: Array<{ index: number; success: boolean; error?: string }>, originalItems: any[]) {
+  console.log("🔄 Processing failed log items...");
+  
+  for (const failedResult of failedResults) {
+    const originalItem = originalItems[failedResult.index];
+    const error = failedResult.error || '';
+    
+    // Check if error is related to missing notebook
+    if (error.includes('notebook') || error.includes('404') || error.includes('not found')) {
+      console.log(`🔄 Attempting to create missing notebook for log item ${failedResult.index}`);
+      
+      // Extract notebook info from the log item
+      const notebookInfo = extractNotebookInfoFromLog(originalItem);
+      if (notebookInfo) {
+        try {
+          const notebookResult = await uploadNotebookToCodeBench(notebookInfo);
+          if (notebookResult.success) {
+            console.log(`✅ Successfully created notebook: ${notebookInfo.notebook_id}`);
+            
+            // Retry the specific log item
+            await retryIndividualLog(originalItem);
+          } else {
+            console.error(`❌ Failed to create notebook: ${notebookInfo.notebook_id}`, notebookResult.error);
+          }
+        } catch (notebookError) {
+          console.error(`❌ Failed to create notebook: ${notebookInfo.notebook_id}`, notebookError);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Handle missing notebooks by creating them and retrying the upload
+ */
+async function handleMissingNotebooks(items: any[]) {
+  console.log("🔄 Creating missing notebooks and retrying upload...");
+  
+  // Extract unique notebooks from log items
+  const notebooksToCreate = new Map<string, any>();
+  
+  items.forEach(item => {
+    if (item.log_info && item.log_info.notebook_id) {
+      const notebookId = item.log_info.notebook_id;
+      if (!notebooksToCreate.has(notebookId)) {
+        const notebookInfo = extractNotebookInfoFromLog(item);
+        if (notebookInfo) {
+          notebooksToCreate.set(notebookId, notebookInfo);
+        }
+      }
+    }
+  });
+  
+  // Create all missing notebooks
+  for (const [notebookId, notebookInfo] of notebooksToCreate) {
+    try {
+      const notebookResult = await uploadNotebookToCodeBench(notebookInfo);
+      if (notebookResult.success) {
+        console.log(`✅ Created notebook: ${notebookId}`);
+      } else {
+        console.error(`❌ Failed to create notebook: ${notebookId}`, notebookResult.error);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to create notebook: ${notebookId}`, error);
+    }
+  }
+  
+  // Retry the original upload
+  console.log("🔄 Retrying original log upload...");
+  try {
+    const retryResponse = await axios.post('http://localhost:8888/cb-server/logs/batch', { items }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    console.log("✅ Retry successful:", retryResponse.data);
+  } catch (retryError) {
+    console.error("❌ Retry failed:", retryError);
+  }
+}
+
+/**
+ * Extract notebook information from a log item
+ */
+function extractNotebookInfoFromLog(logItem: any) {
+  if (!logItem.log_info || !logItem.log_info.notebook_id) {
+    return null;
+  }
+  
+  const notebookId = logItem.log_info.notebook_id;
+  const notebookName = notebookId.split('/').pop() || notebookId;
+  
+  return {
+    notebook_id: notebookId,
+    net_id: logItem.net_id,
+    course_id: logItem.course_id,
+    name: notebookName,
+    type: 'regular' as 'activebook' | 'regular', // Default to regular, could be enhanced to detect activebook
+    topics: [],
+    last_opened: new Date().toISOString()
+  };
+}
+
+/**
+ * Retry uploading a single log item
+ */
+async function retryIndividualLog(logItem: any) {
+  try {
+    const response = await axios.post('http://localhost:8888/cb-server/logs', logItem, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    console.log("✅ Individual log retry successful:", response.data);
+  } catch (error) {
+    console.error("❌ Individual log retry failed:", error);
   }
 }
 
@@ -159,12 +311,22 @@ export async function uploadNotebookToCodeBench(notebook: {
     console.log("✅ Notebook upload response:", response.data);
     if (!response.data.success) {
       console.error("❌ CodeBench reported notebook upload failure:", response.data.error);
+      return { success: false, error: response.data.error };
     }
+    return { success: true, data: response.data.data };
   } catch (error) {
     console.error("❌ Notebook upload failed:", error);
     if (error && typeof error === 'object' && 'isAxiosError' in error) {
-      console.error("Axios error details:", (error as any).response?.data || (error as any).message);
+      const axiosError = error as any;
+      console.error("Axios error details:", axiosError.response?.data || axiosError.message);
+      
+      // If it's a 409 conflict, the notebook already exists, which is fine
+      if (axiosError.response?.status === 409) {
+        console.log("ℹ️ Notebook already exists:", notebook.notebook_id);
+        return { success: true, data: null };
+      }
     }
+    return { success: false, error };
   }
 }
 
@@ -300,6 +462,8 @@ document.body.appendChild(style);
         const logCurrentCell = () => {
           if (currentCellId && cellEnterTime && lastCellActivityTime) {
             const activeDuration = Math.floor((lastCellActivityTime - cellEnterTime) / 1000);
+            
+            // Store in local array for UI display and batch upload later
             cellVisitLogs.push({
               notebookId,
               cellId: currentCellId,
@@ -308,7 +472,8 @@ document.body.appendChild(style);
               leave: lastCellActivityTime,
               activeDuration
             });
-            console.log(`[ReadingTracker] ⌛ Cell ${currentCellIndex} (${currentCellId}) in ${notebookId} tracked for ${activeDuration}s`);
+            
+            console.log(`[ReadingTracker] ⌛ Cell ${currentCellIndex} (${currentCellId}) in ${notebookId} tracked for ${activeDuration}s (stored for batch upload)`);
           }
         };
 
@@ -422,7 +587,10 @@ document.body.appendChild(style);
             last_opened
           };
         
-          await uploadNotebookToCodeBench(notebookInfo);
+          const notebookResult = await uploadNotebookToCodeBench(notebookInfo);
+          if (!notebookResult.success) {
+            console.error("❌ Failed to upload notebook:", notebookResult.error);
+          }
         });        
 
         return widget;
@@ -702,6 +870,18 @@ document.body.appendChild(style);
           copyPasteLogs.push(logEntry);
           console.log(`[ReadingTracker] Copy: ${copiedText.length} chars from ${context.notebookId}`, { preview });
           
+          // Upload copy log immediately when copy action is detected
+          await logManager.addLog({
+            net_id: NET_ID,
+            course_id: COURSE_ID,
+            log_info: {
+              type: 'copy_paste',
+              notebook_id: context.notebookId,
+              cell_id: context.cellId,
+              pasted_content: limitedContent
+            }
+          }, true); // Immediate upload when copy action is detected
+          
           // Automatically save to file system
           saveCopyPasteLogsSync();
         }
@@ -743,6 +923,18 @@ document.body.appendChild(style);
           copyPasteLogs.push(logEntry);
           console.log(`[ReadingTracker] Paste: ${clipboardData.length} chars to ${context.notebookId} (${isInternal ? 'internal' : 'external'})`, { preview });
           
+          // Upload paste log immediately when paste action is detected
+          await logManager.addLog({
+            net_id: NET_ID,
+            course_id: COURSE_ID,
+            log_info: {
+              type: 'copy_paste',
+              notebook_id: context.notebookId,
+              cell_id: context.cellId,
+              pasted_content: limitedContent
+            }
+          }, true); // Immediate upload when paste action is detected
+          
           // Automatically save to file system
           saveCopyPasteLogsSync();
         }
@@ -757,19 +949,58 @@ document.body.appendChild(style);
     let lastPageActivityTime: number | null = null;
 
     if (app.shell.currentChanged) {
-      app.shell.currentChanged.connect((_, args) => {
+      app.shell.currentChanged.connect(async (_, args) => {
         const now = Date.now();
   
         if (currentPageLabel && currentPageEnterTime && lastPageActivityTime) {
           const activeDuration = Math.floor((lastPageActivityTime - currentPageEnterTime) / 1000);
           
+          // Store in local array for UI display
           visitLogs.push({
             pageId: currentPageLabel,
             enter: currentPageEnterTime,
             leave: lastPageActivityTime,
             activeDuration,
           });
-          console.log(`[ReadingTracker] Left: ${currentPageLabel} (Active: ${activeDuration}s)`);
+          
+          // Upload notebook log immediately when user switches notebooks
+          if (activeDuration > 0) {
+            await logManager.addLog({
+              net_id: NET_ID,
+              course_id: COURSE_ID,
+              log_info: {
+                type: 'notebook',
+                notebook_id: currentPageLabel,
+                duration: activeDuration
+              }
+            }, true); // Immediate upload when user switches notebooks
+          }
+          
+          // Upload cell logs in batches when notebook switches
+          const notebookCellLogs = cellVisitLogs.filter(log => log.notebookId === currentPageLabel);
+          if (notebookCellLogs.length > 0) {
+            console.log(`📦 Uploading ${notebookCellLogs.length} cell logs for notebook: ${currentPageLabel}`);
+            for (const cellLog of notebookCellLogs) {
+              if (cellLog.activeDuration > 0) {
+                await logManager.addLog({
+                  net_id: NET_ID,
+                  course_id: COURSE_ID,
+                  log_info: {
+                    type: 'cell',
+                    notebook_id: cellLog.notebookId,
+                    cell_id: cellLog.cellId,
+                    duration: cellLog.activeDuration
+                  }
+                }, false); // Batch upload for cell logs when notebook switches
+              }
+            }
+            // Remove uploaded cell logs from local array
+            const remainingCellLogs = cellVisitLogs.filter(log => log.notebookId !== currentPageLabel);
+            cellVisitLogs.length = 0;
+            cellVisitLogs.push(...remainingCellLogs);
+          }
+          
+          console.log(`[ReadingTracker] Left: ${currentPageLabel} (Active: ${activeDuration}s) - logged immediately`);
         }
         
         // Start new session
@@ -806,12 +1037,25 @@ if (newWidget) {
 
     (window as any).__labFocusCount = 0;
 
-    window.addEventListener('blur', () => {
+    window.addEventListener('blur', async () => {
       if (windowActiveStart !== null) {
         const now = Date.now();
         // Only track time if not paused
         if (!trackingPaused) {
+          const windowDuration = Math.floor((now - windowActiveStart) / 1000);
           totalWindowActiveTime += now - windowActiveStart;
+          
+          // Log window activity immediately when user switches tabs
+          if (windowDuration > 0) {
+            await logManager.addLog({
+              net_id: NET_ID,
+              course_id: COURSE_ID,
+              log_info: {
+                type: 'window',
+                duration: windowDuration
+              }
+            }, true); // Immediate upload when user switches tabs
+          }
         }
         windowActiveStart = null;
     
@@ -823,7 +1067,7 @@ if (newWidget) {
         }
     
         hasBlurOccurred = true;
-        console.log(`👋 Left window`);
+        console.log(`👋 Left window - logged ${Math.floor((now - (windowActiveStart || now)) / 1000)}s`);
       }
     });
 
@@ -933,74 +1177,31 @@ if (newWidget) {
     window.addEventListener('beforeunload', async () => {
       const net_id = NET_ID;
       const course_id = COURSE_ID;
-      const time_stamp = new Date().toISOString();
     
-      const items: any[] = [];
-    
-      // Window log
-      const windowDuration = Math.floor(totalWindowActiveTime / 1000);
-      if (windowDuration > 0) {
-        items.push({
-          net_id,
-          course_id,
-          time_stamp,
-          log_info: {
-            type: 'window',
-            duration: windowDuration
+      // Upload any remaining cell logs for current notebook
+      if (currentPageLabel) {
+        const currentNotebookCellLogs = cellVisitLogs.filter(log => log.notebookId === currentPageLabel);
+        if (currentNotebookCellLogs.length > 0) {
+          console.log(`📦 Uploading ${currentNotebookCellLogs.length} remaining cell logs for notebook: ${currentPageLabel}`);
+          for (const cellLog of currentNotebookCellLogs) {
+            if (cellLog.activeDuration > 0) {
+              await logManager.addLog({
+                net_id,
+                course_id,
+                log_info: {
+                  type: 'cell',
+                  notebook_id: cellLog.notebookId,
+                  cell_id: cellLog.cellId,
+                  duration: cellLog.activeDuration
+                }
+              }, false); // Batch upload for remaining cell logs
+            }
           }
-        });
+        }
       }
     
-      // Notebook logs
-      visitLogs.forEach(log => {
-        if (log.activeDuration > 0) {
-          items.push({
-            net_id,
-            course_id,
-            time_stamp,
-            log_info: {
-              type: 'notebook',
-              notebook_id: log.pageId,
-              duration: log.activeDuration
-            }
-          });
-        }
-      });
-    
-      // Cell logs
-      cellVisitLogs.forEach(log => {
-        if (log.activeDuration > 0) {
-          items.push({
-            net_id,
-            course_id,
-            time_stamp,
-            log_info: {
-              type: 'cell',
-              notebook_id: log.notebookId,
-              cell_id: log.cellId,
-              duration: log.activeDuration
-            }
-          });
-        }
-      });
-    
-      // Copy/paste logs
-      copyPasteLogs.forEach(log => {
-        items.push({
-          net_id,
-          course_id,
-          time_stamp,
-          log_info: {
-            type: 'copy_paste',
-            notebook_id: log.context.notebookId || undefined,
-            cell_id: log.context.cellId || undefined,
-            pasted_content: log.content || ''
-          }
-        });
-      });
-    
-      // Upload to CodeBench server
-      await uploadLogsToCodeBench({ items });
+      // Force flush any remaining batch logs
+      await logManager.flush();
     });    
 
     // 🔢 Assignment Progress Tracker
@@ -1020,3 +1221,111 @@ if (newWidget) {
 
 const plugins: JupyterFrontEndPlugin<void>[] = [readingTrackerPlugin, myDashboardPlugin];
 export default plugins;
+
+// Log Manager for hybrid immediate/batch uploads
+class LogManager {
+  private batchLogs: any[] = [];
+  private batchTimer: NodeJS.Timeout | null = null;
+  private readonly maxBatchSize = 50;
+  private readonly maxWaitTime = 30000; // 30 seconds
+  private isUploading = false;
+
+  constructor() {
+    // Ensure logs are uploaded when page is unloaded
+    window.addEventListener('beforeunload', () => {
+      this.uploadBatch(true); // Force upload
+    });
+
+    // Upload on visibility change (user switches tabs)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        this.uploadBatch(true);
+      }
+    });
+  }
+
+  async addLog(log: any, immediate: boolean = false) {
+    if (immediate) {
+      await this.uploadIndividualLog(log);
+    } else {
+      this.batchLogs.push(log);
+      this.scheduleBatchUpload();
+    }
+  }
+
+  private scheduleBatchUpload() {
+    // Upload immediately if batch is full
+    if (this.batchLogs.length >= this.maxBatchSize) {
+      this.uploadBatch();
+    } 
+    // Schedule upload if timer isn't already set
+    else if (!this.batchTimer) {
+      this.batchTimer = setTimeout(() => this.uploadBatch(), this.maxWaitTime);
+    }
+  }
+
+  private async uploadBatch(force: boolean = false) {
+    if (this.isUploading || (this.batchLogs.length === 0 && !force)) {
+      return;
+    }
+
+    this.isUploading = true;
+    
+    // Clear the timer
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer);
+      this.batchTimer = null;
+    }
+
+    // Get current batch and clear the array
+    const logsToUpload = [...this.batchLogs];
+    this.batchLogs = [];
+
+    if (logsToUpload.length > 0) {
+      console.log(`📦 Uploading batch of ${logsToUpload.length} logs...`);
+      const result = await uploadLogsToCodeBench({ items: logsToUpload });
+      if (!result.success) {
+        console.error("❌ Batch upload failed:", result.error);
+        // Could implement retry logic here if needed
+      }
+    }
+
+    this.isUploading = false;
+  }
+
+  private async uploadIndividualLog(log: any) {
+    console.log("⚡ Uploading individual log immediately...");
+    try {
+      const response = await axios.post('http://localhost:8888/cb-server/logs', log, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.data.success) {
+        console.error("❌ Individual log upload failed:", response.data.error);
+        // Fallback to batch if individual upload fails
+        this.batchLogs.push(log);
+        this.scheduleBatchUpload();
+      } else {
+        console.log("✅ Individual log uploaded successfully");
+      }
+    } catch (error) {
+      console.error("❌ Individual log upload error:", error);
+      // Fallback to batch if individual upload fails
+      this.batchLogs.push(log);
+      this.scheduleBatchUpload();
+    }
+  }
+
+  // Public method to force upload current batch
+  async flush() {
+    await this.uploadBatch(true);
+  }
+
+  // Get current batch size for debugging
+  getBatchSize() {
+    return this.batchLogs.length;
+  }
+}
+
+// Global log manager instance
+const logManager = new LogManager();
