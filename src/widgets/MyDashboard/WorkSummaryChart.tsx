@@ -17,7 +17,6 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
   return (
     <div style={{ width: '100%' }}>
       {/* Time Distribution Pie Chart */}
-      <h4>📊 Time Distribution</h4>
       <div style={{ width: '100%', height: 300 }}>
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -44,8 +43,7 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
       </div>
 
       {/* Minutes Spent per File Bar Chart */}
-      <h4 style={{ marginTop: '1em' }}>📊 Minutes Spent per File</h4>
-      <div style={{ width: '100%', height: 300 }}>
+      <div style={{ marginTop: '1em', width: '100%', height: 300 }}>
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>

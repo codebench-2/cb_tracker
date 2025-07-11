@@ -177,7 +177,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
   autoStart: true,
   optional: [IMainMenu],
   activate: (app: JupyterFrontEnd, mainMenu?: IMainMenu) => {
-    console.log('✅ JupyterLab extension cb-tracker is activated!');
+    console.log('✅ cb-tracker plugin activated');
   
     // Mount sidebar widget
     const widget = ReactWidget.create(<ReadingTrackerWidget />);
@@ -186,15 +186,71 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
     widget.title.closable = true;
     app.shell.add(widget, 'left');
 
-    // Create the My Dashboard sidebar widget
-const dashboardWidget = new MyDashboardWidget();
-dashboardWidget.id = 'my-dashboard-widget';
-dashboardWidget.title.label = 'My Dashboard';
-dashboardWidget.title.iconClass = 'jp-Icon jp-Icon-20 jp-DashboardIcon'; // optional, replace with your icon
-dashboardWidget.title.closable = true;
+    // My Dashboard button on the launcher
+    const dashboardWidget = new MyDashboardWidget();
+    dashboardWidget.id = 'my-dashboard-widget';
+    dashboardWidget.title.label = 'My Dashboard';
+    dashboardWidget.title.iconClass = 'jp-Icon jp-Icon-20 jp-DashboardIcon'; // optional, replace with your icon
+    dashboardWidget.title.closable = true;
+    app.shell.add(dashboardWidget, 'main');
 
-// Add to the left sidebar
-app.shell.add(dashboardWidget, 'left', { rank: 500 });
+class DashboardButtonWidget extends Widget {
+  constructor() {
+    super();
+    this.addClass('jp-DashboardButtonWidget');
+    
+    const button = document.createElement('button');
+    button.textContent = 'Open My Dashboard';
+    button.className = 'jp-Button jp-mod-styled';
+    
+    button.addEventListener('click', () => {
+      app.shell.activateById('my-dashboard-widget');
+      
+      if (!Array.from(app.shell.widgets('main')).find(w => w.id === 'my-dashboard-widget')) {
+        const newDashboard = new MyDashboardWidget();
+        newDashboard.id = 'my-dashboard-widget';
+        newDashboard.title.label = 'My Dashboard';
+        newDashboard.title.iconClass = 'jp-Icon jp-Icon-20 jp-DashboardIcon';
+        newDashboard.title.closable = true;
+        app.shell.add(newDashboard, 'main');
+        app.shell.activateById('my-dashboard-widget');
+      }
+    });
+    
+    this.node.appendChild(button);
+  }
+}
+
+const dashboardButton = new DashboardButtonWidget();
+dashboardButton.id = 'dashboard-button-widget';
+dashboardButton.title.label = 'Dashboard Shortcut';
+dashboardButton.title.iconClass = 'jp-Icon jp-Icon-16 jp-DashboardButtonIcon';
+app.shell.add(dashboardButton, 'left');
+
+const style = document.createElement('style');
+style.textContent = `
+  .jp-DashboardButtonWidget {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--jp-border-color1);
+  }
+  
+  .jp-DashboardButtonWidget button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 8px;
+    background: var(--jp-brand-color1);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  
+  .jp-DashboardButtonWidget button:hover {
+    background: var(--jp-brand-color0);
+  }
+`;
+document.body.appendChild(style);
 
     // 🪄 Add Assignment Progress Tracker to each notebook's top bar
     app.docRegistry.addWidgetExtension('Notebook', {
@@ -718,16 +774,24 @@ app.shell.add(dashboardWidget, 'left', { rank: 500 });
         
         // Start new session
         const newWidget = args.newValue;
-        if (newWidget) {
-          currentPageLabel = newWidget.title.label || newWidget.id || 'unknown';
-          currentPageEnterTime = now;
-          lastPageActivityTime = now; // Initialize activity time
-          console.log(`[ReadingTracker] Entered: ${currentPageLabel}`);
-        } else {
-          currentPageLabel = null;
-          currentPageEnterTime = null;
-          lastPageActivityTime = null;
-        }
+if (newWidget) {
+  if (newWidget instanceof NotebookPanel) {
+    // If the widget is a notebook, capture its full path for precise logging
+    currentPageLabel = newWidget.context.path; // e.g., 'Activebook/Lab 01.ipynb'
+    console.log(`[ReadingTracker] Entered notebook: ${currentPageLabel}`);
+  } else {
+    // Fallback to label or id
+    currentPageLabel = newWidget.title.label || newWidget.id || 'unknown';
+    console.log(`[ReadingTracker] Entered widget: ${currentPageLabel}`);
+  }
+  currentPageEnterTime = now;
+  lastPageActivityTime = now; // Initialize activity time
+  console.log(`[ReadingTracker] Entered: ${currentPageLabel}`);
+} else {
+  currentPageLabel = null;
+  currentPageEnterTime = null;
+  lastPageActivityTime = null;
+}
     
         markActivity(); // record activity on page switch
       });

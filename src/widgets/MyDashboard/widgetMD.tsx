@@ -11,7 +11,8 @@ export const MyDashboard = () => {
   const [dailyActiveMinutes, setDailyActiveMinutes] = useState<number[]>([]);
   const [consistencyScore, setConsistencyScore] = useState<number | null>(null);
   const [consistencyStreak, setConsistencyStreak] = useState<{ day: string; value: number }[]>([]);
-  const [typeChartData, setTypeChartData] = useState<{ name: string; minutes: number }[]>([]);
+  const [activebookChartData, setActivebookChartData] = useState<{ name: string; minutes: number }[]>([]);
+  const [regularChartData, setRegularChartData] = useState<{ name: string; minutes: number }[]>([]);
   
   // For streaks & engagement chart
   useEffect(() => {
@@ -87,8 +88,8 @@ useEffect(() => {
     console.log(logs);
 
     let totalLabTime = 0;
-    const minutesByName: Record<string, number> = {};
-    const minutesByType: Record<string, number> = {};
+    const minutesByActivebook: Record<string, number> = {};
+    const minutesByRegular: Record<string, number> = {};
 
     logs.forEach((log: any) => {
       const { log_info } = log;
@@ -97,47 +98,52 @@ useEffect(() => {
       }
       if (log_info.type === 'notebook' && log_info.notebook_id) {
         const name = log_info.name || log_info.notebook_id;
-        const type = log_info.type_detail || log_info.type || 'unknown'; // fallback
+        const type = (log_info.type_detail || '').toLowerCase(); // 'activebook' or 'regular'
+
         if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
-          minutesByName[name] = (minutesByName[name] || 0) + log_info.duration;
-          minutesByType[type] = (minutesByType[type] || 0) + log_info.duration;
+          if (type === 'activebook') {
+            minutesByActivebook[name] = (minutesByActivebook[name] || 0) + log_info.duration;
+          } else {
+            minutesByRegular[name] = (minutesByRegular[name] || 0) + log_info.duration;
+          }
         }
       }
     });
 
     setLabTime(totalLabTime);
 
-    // ✅ For summaries table and pie chart by notebook name
-    const summaryArray = Object.entries(minutesByName)
+    // For summaries table (all combined for list)
+    const summaryArray = Object.entries({ ...minutesByActivebook, ...minutesByRegular })
       .map(([name, duration]) => ({
-        notebookId: name, // ✅ matches your useState type
+        notebookId: name,
         duration
       }))
       .sort((a, b) => b.duration - a.duration);
 
     setSummaries(summaryArray);
 
-    // ✅ For pie chart by notebook type
-    const typeDataArray = Object.entries(minutesByType)
-      .map(([type, duration]) => ({
-        name: type,
+    // For Activebook chart
+    const activebookData = Object.entries(minutesByActivebook)
+      .map(([name, duration]) => ({
+        name,
         minutes: parseFloat((duration / 60).toFixed(1))
       }))
       .filter(entry => entry.minutes > 0);
 
-    setTypeChartData(typeDataArray);
+    // For Regular chart
+    const regularData = Object.entries(minutesByRegular)
+      .map(([name, duration]) => ({
+        name,
+        minutes: parseFloat((duration / 60).toFixed(1))
+      }))
+      .filter(entry => entry.minutes > 0);
+
+    setActivebookChartData(activebookData);
+    setRegularChartData(regularData);
   }
 
   loadData();
 }, []);
-
-// ✅ One clean mapping for notebook pie chart
-const workDataByName = summaries
-  .map(summary => ({
-    name: summary.notebookId,
-    minutes: parseFloat((summary.duration / 60).toFixed(1))
-  }))
-  .filter(entry => entry.minutes > 0);
 
   return (
     <>
@@ -182,15 +188,20 @@ const workDataByName = summaries
           )}
         </section>
 
-        <section style={{ marginTop: '1em', display: 'flex', gap: '1em', flexWrap: 'wrap' }}>
-  <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-    <h3>📈 Time Distribution by Notebook Name</h3>
-    <WorkSummaryChart data={workDataByName as any} />
-  </div>
-  
-  <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-    <h3>📈 Time Distribution by Notebook Type</h3>
-    <WorkSummaryChart data={typeChartData as any} />
+        <section style={{ marginTop: '2em' }}>
+  <h3>📈 Time Distribution</h3>
+  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
+    {/* Activebook Chart */}
+    <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+      <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
+      <WorkSummaryChart data={activebookChartData as any} />
+    </div>
+
+    {/* Regular Notebook Chart */}
+    <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+      <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
+      <WorkSummaryChart data={regularChartData as any} />
+    </div>
   </div>
 </section>
 
