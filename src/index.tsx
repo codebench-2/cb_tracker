@@ -413,7 +413,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
         // Create Dashboard widget instance
     const dashboardWidget = new MyDashboardWidget();
     dashboardWidget.id = 'my-dashboard-widget';
-    // dashboardWidget.title.label = 'My Dashboard';
+    dashboardWidget.title.label = 'My Dashboard';
     dashboardWidget.title.icon = dashboardIcon;
     dashboardWidget.title.caption = 'My Dashboard';
     dashboardWidget.title.closable = true;
@@ -439,8 +439,8 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
       });
     }
 
-    // Add to left sidebar
-    app.shell.add(dashboardWidget, 'left', { rank: 100 });
+    // Note: Dashboard will only be added to main area when the command is executed
+    // No need to add it to left sidebar since it should always open in main area
 
     // Note: The launcher addition is handled by myDashboardPlugin.tsx
     // which will use the command we just created above
