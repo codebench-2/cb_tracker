@@ -408,7 +408,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
     widget.id = 'cb-tracker-widget';
     widget.title.label = 'Reading Tracker';
     widget.title.closable = true;
-    // app.shell.add(widget, 'left');
+    app.shell.add(widget, 'left', { rank: 10000000 });
 
         // Create Dashboard widget instance
     const dashboardWidget = new MyDashboardWidget();
