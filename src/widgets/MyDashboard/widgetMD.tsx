@@ -212,11 +212,19 @@ useEffect(() => {
       </div>
     )}
 
-    {/* Regular Notebook Chart */}
-    <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-      <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
-      <WorkSummaryChart data={regularChartData as any} />
-    </div>
+    {/* Regular Notebook Chart - only if there are regular notebooks */}
+    {regularChartData.length > 0 && (
+      <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+        <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
+        <WorkSummaryChart data={regularChartData as any} />
+      </div>
+    )}
+    {/* if both are empty, show a message */}
+    {activebookChartData.length === 0 && regularChartData.length === 0 && (
+      <div style={{ flex: '1 1 100%', minWidth: '300px' }}>
+        <p>No work done today.</p>
+      </div>
+    )}
   </div>
 </section>
 
