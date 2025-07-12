@@ -88,11 +88,13 @@ useEffect(() => {
     console.log(logs);
 
     let totalLabTime = 0;
+    // Map: notebookId -> { duration, latestTimestamp }
+    const notebookSummary: Record<string, { duration: number; latestTimestamp: number }> = {};
     const minutesByActivebook: Record<string, number> = {};
     const minutesByRegular: Record<string, number> = {};
 
     logs.forEach((log: any) => {
-      const { log_info } = log;
+      const { log_info, time_stamp } = log;
       if (log_info.type === 'window') {
         totalLabTime += log_info.duration;
       }
@@ -101,6 +103,16 @@ useEffect(() => {
         const type = (log_info.type_detail || '').toLowerCase(); // 'activebook' or 'regular'
 
         if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
+          // Track total duration and latest timestamp for each notebook
+          if (!notebookSummary[name]) {
+            notebookSummary[name] = { duration: 0, latestTimestamp: 0 };
+          }
+          notebookSummary[name].duration += log_info.duration;
+          const ts = new Date(time_stamp).getTime();
+          if (ts > notebookSummary[name].latestTimestamp) {
+            notebookSummary[name].latestTimestamp = ts;
+          }
+
           if (type === 'activebook') {
             minutesByActivebook[name] = (minutesByActivebook[name] || 0) + log_info.duration;
           } else {
@@ -113,12 +125,13 @@ useEffect(() => {
     setLabTime(totalLabTime);
 
     // For summaries table (all combined for list)
-    const summaryArray = Object.entries({ ...minutesByActivebook, ...minutesByRegular })
-      .map(([name, duration]) => ({
-        notebookId: name,
-        duration
+    const summaryArray = Object.entries(notebookSummary)
+      .map(([notebookId, { duration, latestTimestamp }]) => ({
+        notebookId,
+        duration,
+        latestTimestamp
       }))
-      .sort((a, b) => b.duration - a.duration);
+      .sort((a, b) => b.latestTimestamp - a.latestTimestamp);
 
     setSummaries(summaryArray);
 
@@ -191,17 +204,27 @@ useEffect(() => {
         <section style={{ marginTop: '2em' }}>
   <h3>📈 Time Distribution</h3>
   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
-    {/* Activebook Chart */}
-    <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-      <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
-      <WorkSummaryChart data={activebookChartData as any} />
-    </div>
+    {/* Activebook Chart - only if there are activebooks */}
+    {activebookChartData.length > 0 && (
+      <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+        <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
+        <WorkSummaryChart data={activebookChartData as any} />
+      </div>
+    )}
 
-    {/* Regular Notebook Chart */}
-    <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-      <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
-      <WorkSummaryChart data={regularChartData as any} />
-    </div>
+    {/* Regular Notebook Chart - only if there are regular notebooks */}
+    {regularChartData.length > 0 && (
+      <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+        <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
+        <WorkSummaryChart data={regularChartData as any} />
+      </div>
+    )}
+    {/* if both are empty, show a message */}
+    {activebookChartData.length === 0 && regularChartData.length === 0 && (
+      <div style={{ flex: '1 1 100%', minWidth: '300px' }}>
+        <p>No work done today.</p>
+      </div>
+    )}
   </div>
 </section>
 
