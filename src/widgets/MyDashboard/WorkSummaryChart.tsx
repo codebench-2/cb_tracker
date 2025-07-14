@@ -38,7 +38,7 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <p style={{ textAlign: 'center', paddingTop: '120px' }}>Loading chart...</p>
+          <p style={{ textAlign: 'center', paddingTop: '120px' }}>No data yet...</p>
         )}
       </div>
 
@@ -58,7 +58,7 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p style={{ textAlign: 'center', paddingTop: '120px' }}>Loading chart...</p>
+          <p style={{ textAlign: 'center', paddingTop: '120px' }}>No data yet...</p>
         )}
       </div>
     </div>

@@ -3,8 +3,8 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-// import { ReactWidget } from '@jupyterlab/apputils';
-// import { ReadingTrackerWidget } from './widgets/ActiveReadingTracker/widgetART';
+import { ReactWidget } from '@jupyterlab/apputils';
+import { ReadingTrackerWidget } from './widgets/ActiveReadingTracker/widgetART';
 import { PageConfig } from '@jupyterlab/coreutils';
 import { IMainMenu } from '@jupyterlab/mainmenu';
 import { NotebookPanel } from '@jupyterlab/notebook';
@@ -410,7 +410,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
     widget.title.closable = true;
     app.shell.add(widget, 'left');
 
-        // Create Dashboard widget instance
+    // Create Dashboard widget instance
     const dashboardWidget = new MyDashboardWidget();
     dashboardWidget.id = 'my-dashboard-widget';
     dashboardWidget.title.label = 'My Dashboard';

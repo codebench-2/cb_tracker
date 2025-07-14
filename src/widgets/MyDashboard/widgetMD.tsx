@@ -62,15 +62,21 @@ export const MyDashboard = () => {
       }
 
       // Calculate consecutive streak based on last7Days where minutes >= 10
-      let streak = 0;
-      for (let i = last7Days.length - 1; i >= 0; i--) {
-        if (last7Days[i] >= 10) {
-          streak += 1;
-        } else {
-          break; // stop counting when a day is inactive
-        }
-      }
-      console.log("Consecutive active streak days:", streak);
+      let historicalStreak = 0;
+            // First, calculate streak from yesterday backwards (excluding today)
+            for (let i = last7Days.length - 2; i >= 0; i--) {
+                if (last7Days[i] >= 10) {
+                    historicalStreak += 1;
+                }
+                else {
+                    break; // stop counting when a day is inactive
+                }
+            }
+            const todayMinutes = last7Days[last7Days.length - 1];
+            const todayContribution = todayMinutes >= 10 ? 1 : 0;
+
+            let streak = historicalStreak + todayContribution;
+            console.log("Consecutive active streak days:", streak);
 
       // Update consistencyStreak for your ConsistencyStreak component
       setConsistencyStreak([{ day: 'Current', value: streak }]);
@@ -202,31 +208,32 @@ useEffect(() => {
         </section>
 
         <section style={{ marginTop: '2em' }}>
-  <h3>📈 Time Distribution</h3>
-  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
-    {/* Activebook Chart - only if there are activebooks */}
-    {activebookChartData.length > 0 && (
-      <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-        <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
-        <WorkSummaryChart data={activebookChartData as any} />
-      </div>
-    )}
+          <h3>📈 Time Distribution</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
+            {/* Activebook Chart - only if there are activebooks */}
+            {activebookChartData.length > 0 && (
+              <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+                <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
+                <WorkSummaryChart data={activebookChartData as any} />
+              </div>
+            )}
 
-    {/* Regular Notebook Chart - only if there are regular notebooks */}
-    {regularChartData.length > 0 && (
-      <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-        <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
-        <WorkSummaryChart data={regularChartData as any} />
-      </div>
-    )}
-    {/* if both are empty, show a message */}
-    {activebookChartData.length === 0 && regularChartData.length === 0 && (
-      <div style={{ flex: '1 1 100%', minWidth: '300px' }}>
-        <p>No work done today.</p>
-      </div>
-    )}
-  </div>
-</section>
+            {/* Regular Notebook Chart - only if there are regular notebooks */}
+            {regularChartData.length > 0 && (
+              <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
+                <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
+                <WorkSummaryChart data={regularChartData as any} />
+              </div>
+            )}
+    
+            {/* if both are empty, show a message */}
+            {activebookChartData.length === 0 && regularChartData.length === 0 && (
+              <div style={{ flex: '1 1 100%', minWidth: '300px' }}>
+                <p>No work done today.</p>
+              </div>
+            )}
+          </div>
+        </section>
 
         <section style={{ marginTop: '1em' }}>
           <h3>📈 Engagement Streak</h3>
