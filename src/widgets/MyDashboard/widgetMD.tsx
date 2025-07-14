@@ -3,10 +3,10 @@ import { fetchLogsFromCodeBench } from '../../api/codebench';
 import { WorkSummaryChart } from './WorkSummaryChart';
 import { EngagementStreakChart } from './EngagementStreakChart';
 import { ConsistencyStreak } from './ConsistencyStreak';
+import { ConsistencyScoreChart } from './ConsistencyScoreChart';
 
 export const MyDashboard = () => {
   const [labTime, setLabTime] = useState(0);
-  const [focusCount] = useState(0);
   const [summaries, setSummaries] = useState<{ notebookId: string, duration: number }[]>([]);
   const [dailyActiveMinutes, setDailyActiveMinutes] = useState<number[]>([]);
   const [consistencyScore, setConsistencyScore] = useState<number | null>(null);
@@ -20,17 +20,19 @@ export const MyDashboard = () => {
   const todayKey = `goal-${new Date().toLocaleDateString()}`;
   const [isGoalLocked, setIsGoalLocked] = useState(() => !!localStorage.getItem(todayKey));
   const todayMinutes = labTime / 60;
+  const [longTermConsistency, setLongTermConsistency] = useState<{ day: string; value: number }[]>([]);
 
-useEffect(() => {
-  if (todayMinutes >= targetMinutes && !goalAwarded) {
-    setGoalStatus('🎉 Goal achieved! Bonus +1');
-    setBonusPoints(prev => prev + 1);
-    setGoalAwarded(true);
-  } else if (todayMinutes < targetMinutes) {
-    setGoalStatus('❌ Below goal');
-    setGoalAwarded(false);
-  }
-}, [todayMinutes, targetMinutes, goalAwarded]);
+  // For Goal Planner
+  useEffect(() => {
+    if (todayMinutes >= targetMinutes && !goalAwarded) {
+      setGoalStatus('🎉 Goal achieved! Bonus +1');
+      setBonusPoints(prev => prev + 1);
+      setGoalAwarded(true);
+    } else if (todayMinutes < targetMinutes) {
+      setGoalStatus('❌ Below goal');
+      setGoalAwarded(false);
+    }
+  }, [todayMinutes, targetMinutes, goalAwarded]);
 
   // For streaks & engagement chart
   useEffect(() => {
@@ -63,21 +65,31 @@ useEffect(() => {
   
       setDailyActiveMinutes(last7Days);
 
-      // Calculate Consistency Score = mean / (1+var) * 100
-      const total = last7Days.reduce((a, b) => a + b, 0);
-      const mean = total / 7;
+      // Calculate Consistency Score
+      // Parameters
+const expectedEffort = 60; // E: target minutes per day
+const maxBonus = 10;       // B
+const semesterDays = 30;   // T
+const epsilon = 0.01;
+const rMax = 1;
 
-      if (mean === 0) {
-        setConsistencyScore(0);
-        console.log("No activity, consistency score is 0.");
-      } else {
-        const variance = last7Days.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / 7;
-        const stdDev = Math.sqrt(variance);
-        const consistencyFactor = 1 / (1 + (stdDev / mean)); // always between 0 and 1
-        const score = mean * consistencyFactor;
-        setConsistencyScore(score);
-        console.log("Calculated Consistency Score:", score);
-      }
+const alpha = 1 - Math.pow(epsilon, 1 / semesterDays);
+
+let prevScore = 0;
+const smoothedScores: number[] = [];
+
+for (let i = 0; i < last7Days.length; i++) {
+  const h = last7Days[i];
+  const r = Math.max(0, Math.min(h / expectedEffort, rMax));
+  let score = (1 - alpha) * prevScore + alpha * r * maxBonus;
+  score = Math.max(0, Math.min(score, maxBonus)); // clamp
+  smoothedScores.push(score);
+  prevScore = score;
+}
+
+// Use the final score as current consistency score
+const finalScore = smoothedScores[smoothedScores.length - 1];
+setConsistencyScore(finalScore);
 
       // Calculate consecutive streak based on last7Days where minutes >= 10
       let historicalStreak = 0;
@@ -98,6 +110,28 @@ useEffect(() => {
 
       // Update consistencyStreak for your ConsistencyStreak component
       setConsistencyStreak([{ day: 'Current', value: streak }]);
+
+      const longTerm: { day: string; value: number }[] = [];
+for (let i = 29; i >= 0; i--) {
+  const d = new Date();
+  d.setDate(today.getDate() - i);
+  const key = d.toLocaleDateString();
+  const minutes = Math.round((dailyMap[key] || 0) / 60);
+  longTerm.push({ day: key.slice(0, 5), value: minutes });
+}
+// 用 sliding window 方式计算 consistency score for each day
+const consistencyScores = longTerm.map((_, i, arr) => {
+  if (i < 6) return { day: arr[i].day, value: 0 };
+  const slice = arr.slice(i - 6, i + 1);
+  const vals = slice.map(e => e.value);
+  const mean = vals.reduce((a, b) => a + b, 0) / 7;
+  const variance = vals.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / 7;
+  const stdDev = Math.sqrt(variance);
+  const consistencyFactor = 1 / (1 + (stdDev / mean));
+  const score = mean * consistencyFactor;
+  return { day: arr[i].day, value: parseFloat(score.toFixed(2)) };
+});
+setLongTermConsistency(consistencyScores);
     }
 
     loadData();
@@ -124,7 +158,7 @@ useEffect(() => {
       }
       if (log_info.type === 'notebook' && log_info.notebook_id) {
         const name = log_info.name || log_info.notebook_id;
-        const type = (log_info.type_detail || '').toLowerCase(); // 'activebook' or 'regular'
+        const type = (log.notebook_type || '').toLowerCase(); // 'activebook' or 'regular'
 
         if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
           // Track total duration and latest timestamp for each notebook
@@ -208,9 +242,42 @@ useEffect(() => {
 
         <h2>📊 My Dashboard</h2>
 
-        <section style={{ marginTop: '2em', maxWidth: '700px' }}>
+        <section
+          style={{
+            marginTop: '2em',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        > 
           <div
             style={{
+              backgroundColor: '#e0ffe6',
+              padding: '1em 2em',
+              borderRadius: '12px',
+              fontSize: '1.4em',
+              fontWeight: 'bold',
+              color: '#2b9348',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+              textAlign: 'center',
+            }}
+          >
+            ✅ You used JupyterLab <b>{(labTime / 60).toFixed(1)}</b> minutes today
+          </div>
+        </section>
+
+        <section 
+          style={{
+            marginTop: '2em',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '1.5em',
+          }}
+        >        
+          <div
+            style={{
+              width: '500px',
               border: '2px solid #ffcb69',
               borderRadius: '10px',
               backgroundColor: '#fffaf0',
@@ -279,30 +346,19 @@ useEffect(() => {
               <div style={{ fontWeight: 'bold' }}>{bonusPoints}</div>
             </div>
           </div>
+          {/* Consistency Score Chart */}
+          <div style={{ flex: 1 }}>
+    <h4 style={{ marginBottom: '0.5em' }}>📈 Consistency Score (past 30 days)</h4>
+    <ConsistencyScoreChart scores={longTermConsistency} />
+  </div>
        </section>
 
-        <section style={{ marginTop: '1em' }}>
-          <h3>🧠 JupyterLab Usage</h3>
-          <p>
-            ✅ You used JupyterLab <b>{(labTime / 60).toFixed(1)}</b> minutes today.
-          </p>
-          <p>🔁 You switched windows <b>{focusCount}</b> times today</p>
-        </section>
-
-        <section style={{ marginTop: '1em' }}>
-          <h3>📄 Summary of Work Today</h3>
-          {summaries.length === 0 ? (
-            <p>No session data yet.</p>
-          ) : (
-            <ul style={{ paddingLeft: '1em', fontSize: '0.95em' }}>
-              {summaries.map((summary, idx) => (
-                <li key={idx} style={{ marginBottom: '0.5em' }}>
-                  🗂️ You worked on <strong>{summary.notebookId}</strong> for{' '}
-                  <b>{(summary.duration / 60).toFixed(1)}</b> minutes today.
-                </li>
-              ))}
-            </ul>
-          )}
+       <section style={{ marginTop: '1em' }}>
+          <h3>📈 Engagement Streak</h3>
+          <p>Active minutes in the last 7 days:</p>
+          <div style={{ height: '250px' }}>
+            <EngagementStreakChart data={dailyActiveMinutes} />
+          </div>
         </section>
 
         <section style={{ marginTop: '2em' }}>
@@ -334,11 +390,19 @@ useEffect(() => {
         </section>
 
         <section style={{ marginTop: '1em' }}>
-          <h3>📈 Engagement Streak</h3>
-          <p>Active minutes in the last 7 days:</p>
-          <div style={{ height: '250px' }}>
-            <EngagementStreakChart data={dailyActiveMinutes} />
-          </div>
+          <h3>📄 Summary of Work Today</h3>
+          {summaries.length === 0 ? (
+            <p>No session data yet.</p>
+          ) : (
+            <ul style={{ paddingLeft: '1em', fontSize: '0.95em' }}>
+              {summaries.map((summary, idx) => (
+                <li key={idx} style={{ marginBottom: '0.5em' }}>
+                  🗂️ You worked on <strong>{summary.notebookId}</strong> for{' '}
+                  <b>{(summary.duration / 60).toFixed(1)}</b> minutes today.
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section style={{ marginTop: '1em' }}>

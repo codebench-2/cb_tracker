@@ -346,6 +346,8 @@ export const completedCellCount = () =>
 export const copyPasteCount = () => copyPasteLogs.length;
 export const totalTasks = 10;
 
+export const notebookTypeMap: Record<string, 'activebook' | 'regular'> = {};
+
 export async function uploadNotebookToCodeBench(notebook: {
   notebook_id: string;
   net_id: string;
@@ -627,6 +629,9 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
               error
             );
           }
+          
+          // Save type for use in logs
+          notebookTypeMap[notebookPath] = type;
 
           const notebookInfo = {
             notebook_id: notebookPath,
@@ -1106,7 +1111,8 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
                   type: 'notebook',
                   notebook_id: currentPageLabel,
                   duration: activeDuration
-                }
+                },
+                notebook_type: notebookTypeMap[currentPageLabel] || ''
               },
               true
             ); // Immediate upload when user switches notebooks
@@ -1131,7 +1137,8 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
                       notebook_id: cellLog.notebookId,
                       cell_id: cellLog.cellId,
                       duration: cellLog.activeDuration
-                    }
+                    },
+                    notebook_type: notebookTypeMap[cellLog.notebookId] || ''
                   },
                   false
                 ); // Batch upload for cell logs when notebook switches
