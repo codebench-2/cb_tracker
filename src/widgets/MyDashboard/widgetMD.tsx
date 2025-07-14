@@ -13,7 +13,25 @@ export const MyDashboard = () => {
   const [consistencyStreak, setConsistencyStreak] = useState<{ day: string; value: number }[]>([]);
   const [activebookChartData, setActivebookChartData] = useState<{ name: string; minutes: number }[]>([]);
   const [regularChartData, setRegularChartData] = useState<{ name: string; minutes: number }[]>([]);
-  
+  const [targetMinutes, setTargetMinutes] = useState(30);
+  const [goalStatus, setGoalStatus] = useState('');
+  const [bonusPoints, setBonusPoints] = useState(0);
+  const [goalAwarded, setGoalAwarded] = useState(false);
+  const todayKey = `goal-${new Date().toLocaleDateString()}`;
+  const [isGoalLocked, setIsGoalLocked] = useState(() => !!localStorage.getItem(todayKey));
+  const todayMinutes = labTime / 60;
+
+useEffect(() => {
+  if (todayMinutes >= targetMinutes && !goalAwarded) {
+    setGoalStatus('🎉 Goal achieved! Bonus +1');
+    setBonusPoints(prev => prev + 1);
+    setGoalAwarded(true);
+  } else if (todayMinutes < targetMinutes) {
+    setGoalStatus('❌ Below goal');
+    setGoalAwarded(false);
+  }
+}, [todayMinutes, targetMinutes, goalAwarded]);
+
   // For streaks & engagement chart
   useEffect(() => {
     async function loadData() {
@@ -130,6 +148,13 @@ useEffect(() => {
 
     setLabTime(totalLabTime);
 
+    // Load saved target if exists
+    const savedTarget = localStorage.getItem(todayKey);
+    if (savedTarget) {
+      setTargetMinutes(Number(savedTarget));
+      setIsGoalLocked(true);
+    }
+
     // For summaries table (all combined for list)
     const summaryArray = Object.entries(notebookSummary)
       .map(([notebookId, { duration, latestTimestamp }]) => ({
@@ -182,6 +207,79 @@ useEffect(() => {
       />
 
         <h2>📊 My Dashboard</h2>
+
+        <section style={{ marginTop: '2em', maxWidth: '700px' }}>
+          <div
+            style={{
+              border: '2px solid #ffcb69',
+              borderRadius: '10px',
+              backgroundColor: '#fffaf0',
+              padding: '1.5em',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.08)',
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '1.2em' }}>
+              <h3 style={{ color: '#e76f51', margin: 0 }}>🎯 Goal Planner</h3>
+              <p style={{ fontSize: '0.95em', color: '#333' }}>
+                Set a learning goal for today and track your progress:
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: '1em',
+                alignItems: 'center',
+                justifyItems: 'center',
+                fontSize: '1em',
+                fontWeight: 500,
+              }}
+            >
+              <div style={{ color: '#444' }}>Target</div>
+              <div style={{ color: '#444' }}>Status</div>
+              <div style={{ color: '#444' }}>🎁 Bonus Points</div>
+ 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4em' }}>
+                <span>Study</span>
+                <input
+                  type="number"
+                  min={30}
+                  value={targetMinutes}
+                  onChange={e => {
+                    if (isGoalLocked) return;
+            
+                    const value = Number(e.target.value);
+                    const fixedValue = value < 30 ? 30 : value;
+          
+                    setTargetMinutes(fixedValue);
+                    localStorage.setItem(todayKey, fixedValue.toString());
+                    setIsGoalLocked(true);
+                  }}
+                  disabled={isGoalLocked}          
+                  style={{
+                    width: '60px',
+                    padding: '0.3em',
+                    borderRadius: '6px',
+                    border: '1px solid #ccc',
+                    fontSize: '1em',
+                  }}
+                />
+                <span>mins today</span>
+              </div>
+              <div
+                style={{
+                  fontWeight: 'bold',
+                  color: goalStatus.includes('🎉') ? 'green' : 'red',
+                }}
+              >
+                {goalStatus}
+              </div>
+
+              <div style={{ fontWeight: 'bold' }}>{bonusPoints}</div>
+            </div>
+          </div>
+       </section>
 
         <section style={{ marginTop: '1em' }}>
           <h3>🧠 JupyterLab Usage</h3>
