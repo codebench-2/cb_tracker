@@ -7,6 +7,8 @@ import { Card } from './components/Card';
 import { FaFireAlt } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
 import { FaChartLine } from 'react-icons/fa';
+import { MdPieChart, MdBarChart } from 'react-icons/md';
+import { FaClipboardList } from 'react-icons/fa';
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -252,6 +254,7 @@ export const MyDashboard = () => {
     <>
       <div
         style={{
+          backgroundColor: '#fff3f0',
           position: 'relative',
           padding: '1.5em',
           fontFamily: 'sans-serif',
@@ -261,7 +264,7 @@ export const MyDashboard = () => {
       >
         {/* Student Profile Block */}
         <section style={{ display: 'flex', gap: '2em', marginBottom: '2em' }}>
-          <Card style={{ width: '650px', padding: 0, borderRadius: '20px', overflow: 'hidden' }}>
+        <Card style={{ flex: 1, padding: 0, borderRadius: '20px', overflow: 'hidden' }}>
             {/* 🔺 Top Red Section */}
             <div style={{ backgroundColor: '#e63946', padding: '2.5em 0 2em', textAlign: 'center', color: 'white' }}>
               <div
@@ -317,11 +320,10 @@ export const MyDashboard = () => {
 </Card>
 
 {/* 🎯 Goal Planner row */}
-<div style={{ display: 'flex', flexDirection: 'column', gap: '1.5em' }}>
+<div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5em' }}>
   {/* Goal Planner (上半區塊) */}
   <Card
     style={{
-      width: '635px',
       padding: '2.5em 2em',
       borderRadius: '20px',
       backgroundColor: '#fffaf0',
@@ -383,12 +385,12 @@ export const MyDashboard = () => {
     </div>
   </Card>
 
-  {/* 📊 League + Last Notebook */}
+  {/* League + Last Notebook */}
   <div style={{ display: 'flex', gap: '1.5em' }}>
     {/* League Card */}
     <Card
       style={{
-        width: '290px',
+        flex: 1,
         height: '100px',
         padding: '1em 1.5em',
         borderRadius: '16px',
@@ -436,7 +438,7 @@ export const MyDashboard = () => {
 
     {/* Last Notebook */}
     <div
-      style={{ cursor: lastNotebookPath ? 'pointer' : 'default' }}
+      style={{ flex: 1, cursor: lastNotebookPath ? 'pointer' : 'default' }}
       onClick={() => {
         if (lastNotebookPath) {
           window.open(lastNotebookPath, '_blank');
@@ -445,7 +447,6 @@ export const MyDashboard = () => {
     >
       <Card
         style={{
-          width: '290px',
           height: '100px',
           padding: '1em 1.5em',
           borderRadius: '16px',
@@ -491,7 +492,16 @@ export const MyDashboard = () => {
     gap: '1.5em',
   }}
 >
-<Card style={{ flex: 1, padding: '1.5em 2em', borderRadius: '20px' }}>
+<Card 
+style={{
+  flex: 1,
+  padding: '1.5em 2em',
+  borderRadius: '20px',
+  border: '1px solid #f4a261',
+  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+  backgroundColor: 'white',
+}}
+>
   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1em' }}>
     {React.createElement((FaChartLine as unknown) as React.ComponentType<any>, { style: { color: '#e76f51', fontSize: '1.5em', marginRight: '0.5em' } })}
     <h3 style={{ fontSize: '1.3em', fontWeight: 600, color: '#264653', margin: 0 }}>
@@ -503,66 +513,141 @@ export const MyDashboard = () => {
 </section>
   
         {/* Engagement Streak */}
-        <section style={{ marginTop: '1em' }}>
-          <h3>📈 Engagement Streak</h3>
-          <p>Active minutes in the last 7 days:</p>
-          <div style={{ height: '250px' }}>
-            <EngagementStreakChart data={dailyActiveMinutes} />
-          </div>
+        <section>
+        <Card
+  style={{
+    flex: 1,
+    padding: '1.5em 2em',
+    borderRadius: '20px',
+    border: '1px solid #f4a261',
+    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+    backgroundColor: 'white',
+    marginTop: '1em',
+  }}
+>
+  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
+    {React.createElement((FaChartLine as unknown) as React.ComponentType<any>, { size: 22, style: { color: '#2a9d8f', marginRight: '0.5em' } })}
+    <h3 style={{ fontSize: '1.3em', fontWeight: 600, color: '#264653', margin: '0.5em'}}>
+      Engagement Streak (active time per day)
+    </h3>
+  </div>
+  <div style={{ height: '250px' }}>
+    <EngagementStreakChart data={dailyActiveMinutes} />
+  </div>
+</Card>
         </section>
         
         {/* Time Distribution */}
-        <section style={{ marginTop: '2em' }}>
-          <h3>📈 Time Distribution</h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
-            {activebookChartData.length > 0 && (
-              <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-                <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
-                <WorkSummaryChart data={activebookChartData as any} />
-              </div>
-            )}
-  
-            {regularChartData.length > 0 && (
-              <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
-                <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
-                <WorkSummaryChart data={regularChartData as any} />
-              </div>
-            )}
-  
-            {activebookChartData.length === 0 && regularChartData.length === 0 && (
-              <div style={{ flex: '1 1 100%', minWidth: '300px' }}>
-                <p>No work done today.</p>
-              </div>
-            )}
-          </div>
-        </section>
+        <section style={{ marginTop: '2em', display: 'flex', gap: '2em', flexWrap: 'wrap' }}>
+  {activebookChartData.length > 0 && (
+    <Card style={{ flex: '1 1 45%', padding: '1.5em 2em', borderRadius: '20px', border: '2px solid #f4a261', boxShadow: '4px 4px 12px rgba(0,0,0,0.08)', background: 'white' }}>
+             <h2 style={{ color: '#264653', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+         {React.createElement((MdPieChart as unknown) as React.ComponentType<any>, { style: { color: '#e63946' } })}
+         Time Distribution for Activebook
+       </h2>
+      <WorkSummaryChart data={activebookChartData as any} />
+    </Card>
+  )}
+
+  {regularChartData.length > 0 && (
+    <Card style={{ flex: '1 1 45%', padding: '1.5em 2em', borderRadius: '20px', border: '2px solid #f4a261', boxShadow: '4px 4px 12px rgba(0,0,0,0.08)', background: 'white' }}>
+             <h2 style={{ color: '#264653', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5em' }}>
+         {React.createElement((MdBarChart as unknown) as React.ComponentType<any>, { style: { color: '#2a9d8f' } })}
+         Time Distribution for Assignments and Others
+       </h2>
+      <WorkSummaryChart data={regularChartData as any} />
+    </Card>
+  )}
+</section>
   
         {/* Summary of Work Today */}
         <section style={{ marginTop: '1em' }}>
-          <h3>📄 Summary of Work Today</h3>
-          {summaries.length === 0 ? (
-            <p>No session data yet.</p>
-          ) : (
-            <ul style={{ paddingLeft: '1em', fontSize: '0.95em' }}>
-              {summaries.map((summary, idx) => (
-                <li key={idx} style={{ marginBottom: '0.5em' }}>
-                  🗂️ You worked on <strong>{summary.notebookId}</strong> for{' '}
-                  <b>{(summary.duration / 60).toFixed(1)}</b> minutes today.
-                </li>
-              ))}
-            </ul>
-          )}
+        <Card>
+  <section>
+         <h2
+       style={{
+         fontSize: '1.5em',
+         fontWeight: 700,
+         display: 'flex',
+         alignItems: 'center',
+         gap: '0.5em',
+         color: '#1f2937',
+         marginBottom: '1em',
+       }}
+     >
+       {React.createElement((FaClipboardList as unknown) as React.ComponentType<any>, { style: { color: '#3b82f6' } })}
+       Summary of Work Today
+     </h2>
+    {summaries.length === 0 ? (
+      <p style={{ color: '#6b7280' }}>No session data yet.</p>
+    ) : (
+      <ul style={{ paddingLeft: '1.2em', fontSize: '0.95em', color: '#374151' }}>
+        {summaries.map((summary, idx) => (
+          <li
+            key={idx}
+            style={{
+              marginBottom: '0.4em',
+              lineHeight: '1.6',
+              fontFamily: 'system-ui',
+              padding: '0.2em 0',
+            }}
+          >
+            Worked on{' '}
+            <span style={{ fontWeight: 600 }}>{summary.notebookId}</span> for{' '}
+            <span style={{ fontWeight: 600, color: '#f97316' }}>
+              {(summary.duration / 60).toFixed(1)} minutes
+            </span>{' '}
+            today.
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+</Card>
         </section>
   
         {/* Personalized Suggestion */}
-        <section style={{ marginTop: '1em' }}>
-          <h3>🎯 Personalized Suggestion</h3>
-          <p>
-            ✅ {labTime < 600
-              ? 'Try to spend 10+ min learning today for consistent streaks!'
-              : 'Great job maintaining your learning streak!'}
-          </p>
-        </section>
+        <section style={{ textAlign: 'center', marginTop: '5em', marginBottom: '4em' }}>
+  <h2
+    style={{
+      fontSize: '2em',
+      fontWeight: 800,
+      color: '#1f2937',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '0.5em',
+    }}
+  >
+    🎯 Personalized Suggestion
+  </h2>
+
+  {labTime >= 600 ? (
+    <>
+      <img
+        src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2s4YjFtNmJxeG5zdHJyN2wyYXBrdzQ1Ymp1ZnhjMXVsM2ZsNWFlcyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mkfTnlBlIeNIA/giphy.gif"
+        alt="Celebration Meme"
+        style={{ maxWidth: '300px', borderRadius: '12px', marginTop: '1em' }}
+      />
+      <p style={{ fontSize: '1.3em', fontWeight: 700, color: '#10b981', marginTop: '1em' }}>
+        Learning streak unlocked! 🔥
+      </p>
+      <p style={{ fontSize: '1.1em', color: '#4b5563' }}>You're crushing it — keep going! 💪</p>
+    </>
+  ) : (
+    <>
+      <img
+        src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZHZoejRuZWZuc2EzbjhjbXRtcnIwcTZpMmU5cjc1OGZqdWJxbG5paSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/cr9vIO7NsP5cY/giphy.gif"
+        alt="Work harder meme"
+        style={{ maxWidth: '300px', borderRadius: '12px', marginTop: '1em' }}
+      />
+      <p style={{ fontSize: '1.3em', fontWeight: 700, color: '#f59e0b', marginTop: '1em' }}>
+        Just getting started... 🐢
+      </p>
+      <p style={{ fontSize: '1.1em', color: '#6b7280' }}>Try to hit at least 10 minutes today!</p>
+    </>
+  )}
+</section>
       </div>
     </>
   );  

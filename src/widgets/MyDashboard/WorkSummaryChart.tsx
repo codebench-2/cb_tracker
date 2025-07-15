@@ -14,6 +14,12 @@ interface FileSummary {
 export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#8dd1e1', '#a4de6c'];
 
+  // Name-color mapping
+  const nameColorMap: { [name: string]: string } = {};
+  data.forEach((entry, index) => {
+    nameColorMap[entry.name] = COLORS[index % COLORS.length];
+  });
+
   return (
     <div style={{ width: '100%' }}>
       {/* Time Distribution Pie Chart */}
@@ -30,7 +36,7 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
                 label
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={nameColorMap[entry.name]} />
                 ))}
               </Pie>
               <Tooltip />
@@ -48,13 +54,16 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis dataKey="name" tick={false} />
               <YAxis
                 label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip />
-              <Legend />
-              <Bar dataKey="minutes" fill="#82ca9d" />
+              <Bar dataKey="minutes">
+                {data.map((entry, index) => (
+                  <Cell key={`bar-${index}`} fill={nameColorMap[entry.name]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
