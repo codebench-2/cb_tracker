@@ -2,8 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { fetchLogsFromCodeBench } from '../../api/codebench';
 import { WorkSummaryChart } from './WorkSummaryChart';
 import { EngagementStreakChart } from './EngagementStreakChart';
-import { ConsistencyStreak } from './ConsistencyStreak';
 import { ConsistencyScoreChart } from './ConsistencyScoreChart';
+import { Card } from './components/Card';
+import { FaFireAlt } from 'react-icons/fa';
+import styled, { keyframes } from 'styled-components';
+
+const pulse = keyframes`
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1);   opacity: 1; }
+`;
+
+const FireIcon = styled((FaFireAlt as unknown) as React.ComponentType<any>)`
+  color: #e76f51;
+  animation: ${pulse} 1.2s infinite;
+  font-size: 1.8em;
+`;
 
 export const MyDashboard = () => {
   const [labTime, setLabTime] = useState(0);
@@ -21,6 +35,26 @@ export const MyDashboard = () => {
   const [isGoalLocked, setIsGoalLocked] = useState(() => !!localStorage.getItem(todayKey));
   const todayMinutes = labTime / 60;
   const [longTermConsistency, setLongTermConsistency] = useState<{ day: string; value: number }[]>([]);
+  const [lastNotebookPath, setLastNotebookPath] = useState<string | null>(null);
+  const [lastNotebookTitle, setLastNotebookTitle] = useState<string | null>(null);
+
+  // For last notebook
+  useEffect(() => {
+    async function loadLogs() {
+      const allLogs = await fetchLogsFromCodeBench();
+      const notebookLogs = allLogs
+        .filter((log: any) => log.log_info.type === 'notebook')
+        .sort((a: any, b: any) => new Date(b.time_stamp).getTime() - new Date(a.time_stamp).getTime());
+
+      if (notebookLogs.length > 0) {
+        const recent = notebookLogs[0];
+        setLastNotebookPath(`/lab/tree/${recent.notebook_id}`);
+        const parts = recent.notebook_id.split('/');
+        setLastNotebookTitle(parts[parts.length - 1]);
+      }
+    }
+    loadLogs();
+  }, []);
 
   // For Goal Planner
   useEffect(() => {
@@ -127,91 +161,91 @@ export const MyDashboard = () => {
     loadData();
   }, []);
 
-// For summary of work today
-useEffect(() => {
-  async function loadData() {
-    const logs = await fetchLogsFromCodeBench();
+  // For summary of work today
+  useEffect(() => {
+    async function loadData() {
+      const logs = await fetchLogsFromCodeBench();
 
-    console.log("Fetching logs from CodeBench server...");
-    console.log(logs);
+      console.log("Fetching logs from CodeBench server...");
+      console.log(logs);
 
-    let totalLabTime = 0;
-    // Map: notebookId -> { duration, latestTimestamp }
-    const notebookSummary: Record<string, { duration: number; latestTimestamp: number }> = {};
-    const minutesByActivebook: Record<string, number> = {};
-    const minutesByRegular: Record<string, number> = {};
+      let totalLabTime = 0;
+      // Map: notebookId -> { duration, latestTimestamp }
+      const notebookSummary: Record<string, { duration: number; latestTimestamp: number }> = {};
+      const minutesByActivebook: Record<string, number> = {};
+      const minutesByRegular: Record<string, number> = {};
 
-    logs.forEach((log: any) => {
-      const { log_info, time_stamp } = log;
-      if (log_info.type === 'window') {
-        totalLabTime += log_info.duration;
-      }
-      if (log_info.type === 'notebook' && log_info.notebook_id) {
-        const name = log_info.name || log_info.notebook_id;
-        const type = (log.notebook_type || '').toLowerCase(); // 'activebook' or 'regular'
+      logs.forEach((log: any) => {
+        const { log_info, time_stamp } = log;
+        if (log_info.type === 'window') {
+          totalLabTime += log_info.duration;
+        }
+        if (log_info.type === 'notebook' && log_info.notebook_id) {
+          const name = log_info.name || log_info.notebook_id;
+          const type = (log.notebook_type || '').toLowerCase(); // 'activebook' or 'regular'
 
-        if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
-          // Track total duration and latest timestamp for each notebook
-          if (!notebookSummary[name]) {
-            notebookSummary[name] = { duration: 0, latestTimestamp: 0 };
-          }
-          notebookSummary[name].duration += log_info.duration;
-          const ts = new Date(time_stamp).getTime();
-          if (ts > notebookSummary[name].latestTimestamp) {
-            notebookSummary[name].latestTimestamp = ts;
-          }
+          if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
+            // Track total duration and latest timestamp for each notebook
+            if (!notebookSummary[name]) {
+              notebookSummary[name] = { duration: 0, latestTimestamp: 0 };
+            }
+            notebookSummary[name].duration += log_info.duration;
+            const ts = new Date(time_stamp).getTime();
+            if (ts > notebookSummary[name].latestTimestamp) {
+              notebookSummary[name].latestTimestamp = ts;
+            }
 
-          if (type === 'activebook') {
-            minutesByActivebook[name] = (minutesByActivebook[name] || 0) + log_info.duration;
-          } else {
-            minutesByRegular[name] = (minutesByRegular[name] || 0) + log_info.duration;
+            if (type === 'activebook') {
+              minutesByActivebook[name] = (minutesByActivebook[name] || 0) + log_info.duration;
+            } else {
+              minutesByRegular[name] = (minutesByRegular[name] || 0) + log_info.duration;
+            }
           }
         }
+      });
+
+      setLabTime(totalLabTime);
+
+      // Load saved target if exists
+      const savedTarget = localStorage.getItem(todayKey);
+      if (savedTarget) {
+        setTargetMinutes(Number(savedTarget));
+        setIsGoalLocked(true);
       }
-    });
 
-    setLabTime(totalLabTime);
+      // For summaries table (all combined for list)
+      const summaryArray = Object.entries(notebookSummary)
+        .map(([notebookId, { duration, latestTimestamp }]) => ({
+          notebookId,
+          duration,
+          latestTimestamp
+        }))
+        .sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+ 
+      setSummaries(summaryArray);
 
-    // Load saved target if exists
-    const savedTarget = localStorage.getItem(todayKey);
-    if (savedTarget) {
-      setTargetMinutes(Number(savedTarget));
-      setIsGoalLocked(true);
+      // For Activebook chart
+      const activebookData = Object.entries(minutesByActivebook)
+        .map(([name, duration]) => ({
+          name,
+          minutes: parseFloat((duration / 60).toFixed(1))
+        }))
+        .filter(entry => entry.minutes > 0);
+
+      // For Regular chart
+      const regularData = Object.entries(minutesByRegular)
+        .map(([name, duration]) => ({
+          name,
+          minutes: parseFloat((duration / 60).toFixed(1))
+        }))
+        .filter(entry => entry.minutes > 0);
+
+      setActivebookChartData(activebookData);
+      setRegularChartData(regularData);
     }
 
-    // For summaries table (all combined for list)
-    const summaryArray = Object.entries(notebookSummary)
-      .map(([notebookId, { duration, latestTimestamp }]) => ({
-        notebookId,
-        duration,
-        latestTimestamp
-      }))
-      .sort((a, b) => b.latestTimestamp - a.latestTimestamp);
-
-    setSummaries(summaryArray);
-
-    // For Activebook chart
-    const activebookData = Object.entries(minutesByActivebook)
-      .map(([name, duration]) => ({
-        name,
-        minutes: parseFloat((duration / 60).toFixed(1))
-      }))
-      .filter(entry => entry.minutes > 0);
-
-    // For Regular chart
-    const regularData = Object.entries(minutesByRegular)
-      .map(([name, duration]) => ({
-        name,
-        minutes: parseFloat((duration / 60).toFixed(1))
-      }))
-      .filter(entry => entry.minutes > 0);
-
-    setActivebookChartData(activebookData);
-    setRegularChartData(regularData);
-  }
-
-  loadData();
-}, []);
+    loadData();
+  }, []);
 
   return (
     <>
@@ -224,39 +258,230 @@ useEffect(() => {
           overflowY: 'auto'
         }}
       >
+        {/* Student Profile Block */}
+        <section style={{ display: 'flex', gap: '2em', marginBottom: '2em' }}>
+          <Card style={{ width: '650px', padding: 0, borderRadius: '20px', overflow: 'hidden' }}>
+            {/* 🔺 Top Red Section */}
+            <div style={{ backgroundColor: '#e63946', padding: '2.5em 0 2em', textAlign: 'center', color: 'white' }}>
+              <div
+              style={{
+                width: '100px',
+        height: '100px',
+        borderRadius: '50%',
+        background: '#ccc',
+        margin: '0 auto 1em',
+        fontSize: '2.8em',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      👩‍💻
+    </div>
+    <div style={{ fontWeight: 'bold', fontSize: '1.6em' }}>Fiona Lai</div>
+    <div style={{ fontSize: '1.1em', color: '#fcd5d5' }}>Rutgers CS210</div>
+  </div>
 
-      <ConsistencyStreak
-        consistencyScore={consistencyScore}
-        streakDays={consistencyStreak[0]?.value ?? 0}
-      />
+{/* 🔻 Bottom White Section */}
+<div style={{
+  backgroundColor: 'white',
+  padding: '1.5em',
+  borderBottomLeftRadius: '20px',
+  borderBottomRightRadius: '20px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  fontSize: '1.2em',
+  fontWeight: 500,
+}}>
+  {/* Left: Streak */}
+  <div style={{ textAlign: 'left', color: '#333' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginBottom: '0.2em' }}>
+      <FireIcon />
+      <span style={{ fontSize: '1em' }}>Learning Streak</span>
+    </div>
+    <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#e76f51' }}>
+      {consistencyStreak[0]?.value ?? 0} days
+    </div>
+  </div>
 
-        <h2>📊 My Dashboard</h2>
+  {/* Right: Study Minutes */}
+  <div style={{ textAlign: 'right', color: '#333' }}>
+    <div style={{ marginBottom: '0.2em' }}>Today's Study</div>
+    <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#2a9d8f' }}>
+      {(labTime / 60).toFixed(1)} mins
+    </div>
+  </div>
+</div>
+</Card>
 
-        <section
-          style={{
-            marginTop: '2em',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
+{/* 🎯 Goal Planner row */}
+<div style={{ display: 'flex', flexDirection: 'column', gap: '1.5em' }}>
+  {/* Goal Planner (上半區塊) */}
+  <Card
+    style={{
+      width: '635px',
+      padding: '2.5em 2em',
+      borderRadius: '20px',
+      backgroundColor: '#fffaf0',
+      border: '3px solid #ffcb69',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      gap: '1.2em',
+    }}
+  >
+    <div
+      style={{
+        fontSize: '1.6em',
+        fontWeight: 'bold',
+        color: '#e76f51',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4em',
+      }}
+    >
+      🎯 Goal Planner
+    </div>
+
+    <div style={{ fontSize: '1.2em', color: '#444' }}>
+      <div style={{ marginBottom: '0.7em' }}>
+        <strong>Target:</strong> Study{' '}
+        <input
+          type="number"
+          value={targetMinutes}
+          min={30}
+          disabled={isGoalLocked}
+          onChange={e => {
+            const value = Number(e.target.value);
+            const fixedValue = value < 30 ? 30 : value;
+            setTargetMinutes(fixedValue);
+            localStorage.setItem(todayKey, fixedValue.toString());
+            setIsGoalLocked(true);
           }}
-        > 
-          <div
-            style={{
-              backgroundColor: '#e0ffe6',
-              padding: '1em 2em',
-              borderRadius: '12px',
-              fontSize: '1.4em',
-              fontWeight: 'bold',
-              color: '#2b9348',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-              textAlign: 'center',
-            }}
-          >
-            ✅ You used JupyterLab <b>{(labTime / 60).toFixed(1)}</b> minutes today
-          </div>
-        </section>
+          style={{
+            width: '60px',
+            padding: '0.4em',
+            fontSize: '1em',
+            border: '1px solid #ccc',
+            borderRadius: '6px',
+            margin: '0 0.4em',
+          }}
+        />{' '}
+        mins
+      </div>
+      <div style={{ marginBottom: '0.7em' }}>
+        <strong>Status:</strong>{' '}
+        <span style={{ color: 'green', fontWeight: 'bold' }}>{goalStatus}</span>
+      </div>
+      <div>
+        <strong>Bonus:</strong>{' '}
+        <span style={{ color: '#e76f51', fontWeight: 'bold' }}>{bonusPoints}</span>
+      </div>
+    </div>
+  </Card>
 
-        <section 
+  {/* 📊 League + Last Notebook */}
+  <div style={{ display: 'flex', gap: '1.5em' }}>
+    {/* League Card */}
+    <Card
+      style={{
+        width: '290px',
+        height: '100px',
+        padding: '1em 1.5em',
+        borderRadius: '16px',
+        backgroundColor: '#f7fef7',
+        border: '2px solid #a5d6a7',
+        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
+      <div
+        style={{
+          width: '60px',
+          height: '60px',
+          border: '2px solid #4caf50',
+          background: '#e8f5e9',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 600,
+          color: '#388e3c',
+          fontSize: '1em',
+        }}
+      >
+        League
+      </div>
+      <div style={{ textAlign: 'right', flex: 1, marginLeft: '1em' }}>
+        <div
+          style={{
+            fontSize: '1.8em',
+            fontWeight: 'bold',
+            color: '#6a1b9a',
+            lineHeight: 1,
+          }}
+        >
+          {consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
+        </div>
+        <div style={{ fontSize: '1em', color: '#6a1b9a', marginTop: '0.2em' }}>
+          Consistency Score
+        </div>
+      </div>
+    </Card>
+
+    {/* Last Notebook */}
+    <div
+      style={{ cursor: lastNotebookPath ? 'pointer' : 'default' }}
+      onClick={() => {
+        if (lastNotebookPath) {
+          window.open(lastNotebookPath, '_blank');
+        }
+      }}
+    >
+      <Card
+        style={{
+          width: '290px',
+          height: '100px',
+          padding: '1em 1.5em',
+          borderRadius: '16px',
+          backgroundColor: '#eef2ff',
+          border: '2px solid #9fa8da',
+          boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: '0.6em',
+        }}
+      >
+        <div style={{ fontSize: '1em', color: '#3f51b5', fontWeight: 'bold' }}>
+          📘 Last Opened Notebook
+        </div>
+        <div
+          style={{
+            fontSize: '1.1em',
+            fontWeight: 500,
+            color: '#1a237e',
+            wordBreak: 'break-all',
+          }}
+        >
+          {lastNotebookTitle || 'No notebook yet'}
+        </div>
+        <div style={{ fontSize: '0.85em', color: '#5c6bc0' }}>
+          {lastNotebookPath ? 'Click to open' : ''}
+        </div>
+      </Card>
+    </div>
+  </div>
+</div>
+  
+        </section>
+  
+        {/* Consistency Score Chart */}
+        <section
           style={{
             marginTop: '2em',
             display: 'flex',
@@ -264,113 +489,40 @@ useEffect(() => {
             alignItems: 'flex-start',
             gap: '1.5em',
           }}
-        >        
-          <div
-            style={{
-              width: '500px',
-              border: '2px solid #ffcb69',
-              borderRadius: '10px',
-              backgroundColor: '#fffaf0',
-              padding: '1.5em',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.08)',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '1.2em' }}>
-              <h3 style={{ color: '#e76f51', margin: 0 }}>🎯 Goal Planner</h3>
-              <p style={{ fontSize: '0.95em', color: '#333' }}>
-                Set a learning goal for today and track your progress:
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gap: '1em',
-                alignItems: 'center',
-                justifyItems: 'center',
-                fontSize: '1em',
-                fontWeight: 500,
-              }}
-            >
-              <div style={{ color: '#444' }}>Target</div>
-              <div style={{ color: '#444' }}>Status</div>
-              <div style={{ color: '#444' }}>🎁 Bonus Points</div>
- 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4em' }}>
-                <span>Study</span>
-                <input
-                  type="number"
-                  min={30}
-                  value={targetMinutes}
-                  onChange={e => {
-                    if (isGoalLocked) return;
-            
-                    const value = Number(e.target.value);
-                    const fixedValue = value < 30 ? 30 : value;
-          
-                    setTargetMinutes(fixedValue);
-                    localStorage.setItem(todayKey, fixedValue.toString());
-                    setIsGoalLocked(true);
-                  }}
-                  disabled={isGoalLocked}          
-                  style={{
-                    width: '60px',
-                    padding: '0.3em',
-                    borderRadius: '6px',
-                    border: '1px solid #ccc',
-                    fontSize: '1em',
-                  }}
-                />
-                <span>mins today</span>
-              </div>
-              <div
-                style={{
-                  fontWeight: 'bold',
-                  color: goalStatus.includes('🎉') ? 'green' : 'red',
-                }}
-              >
-                {goalStatus}
-              </div>
-
-              <div style={{ fontWeight: 'bold' }}>{bonusPoints}</div>
-            </div>
-          </div>
-          {/* Consistency Score Chart */}
+        >
+  
           <div style={{ flex: 1 }}>
-    <h4 style={{ marginBottom: '0.5em' }}>📈 Consistency Score (past 150 days)</h4>
-    <ConsistencyScoreChart scores={longTermConsistency} />
-  </div>
-       </section>
-
-       <section style={{ marginTop: '1em' }}>
+            <h4 style={{ marginBottom: '0.5em' }}>📈 Consistency Score (past 150 days)</h4>
+            <ConsistencyScoreChart scores={longTermConsistency} />
+          </div>
+        </section>
+  
+        {/* Remaining sections (unchanged) */}
+        <section style={{ marginTop: '1em' }}>
           <h3>📈 Engagement Streak</h3>
           <p>Active minutes in the last 7 days:</p>
           <div style={{ height: '250px' }}>
             <EngagementStreakChart data={dailyActiveMinutes} />
           </div>
         </section>
-
+  
         <section style={{ marginTop: '2em' }}>
           <h3>📈 Time Distribution</h3>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
-            {/* Activebook Chart - only if there are activebooks */}
             {activebookChartData.length > 0 && (
               <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
                 <h4 style={{ textAlign: 'center' }}>📕 Activebook</h4>
                 <WorkSummaryChart data={activebookChartData as any} />
               </div>
             )}
-
-            {/* Regular Notebook Chart - only if there are regular notebooks */}
+  
             {regularChartData.length > 0 && (
               <div style={{ flex: '1 1 45%', minWidth: '300px' }}>
                 <h4 style={{ textAlign: 'center' }}>📘 Assignments and Others</h4>
                 <WorkSummaryChart data={regularChartData as any} />
               </div>
             )}
-    
-            {/* if both are empty, show a message */}
+  
             {activebookChartData.length === 0 && regularChartData.length === 0 && (
               <div style={{ flex: '1 1 100%', minWidth: '300px' }}>
                 <p>No work done today.</p>
@@ -378,7 +530,7 @@ useEffect(() => {
             )}
           </div>
         </section>
-
+  
         <section style={{ marginTop: '1em' }}>
           <h3>📄 Summary of Work Today</h3>
           {summaries.length === 0 ? (
@@ -394,12 +546,16 @@ useEffect(() => {
             </ul>
           )}
         </section>
-
+  
         <section style={{ marginTop: '1em' }}>
           <h3>🎯 Personalized Suggestion</h3>
-          <p>✅ {labTime < 600 ? "Try to spend 10+ min learning today for consistent streaks!" : "Great job maintaining your learning streak!"}</p>
+          <p>
+            ✅ {labTime < 600
+              ? 'Try to spend 10+ min learning today for consistent streaks!'
+              : 'Great job maintaining your learning streak!'}
+          </p>
         </section>
       </div>
     </>
-  );
+  );  
 };

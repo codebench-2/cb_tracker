@@ -11,9 +11,9 @@ const pulse = keyframes`
 
 // cast the icon to a generic ComponentType so styled() accepts it
 const FireIcon = styled((FaFireAlt as unknown) as React.ComponentType<any>)`
-  color: #ff5722;
+  color: #e76f51;
   animation: ${pulse} 1.2s infinite;
-  font-size: 2.5rem;
+  font-size: 1.8em;
 `;
 
 const StreakContainer = styled.div`
