@@ -6,6 +6,7 @@ import { ConsistencyScoreChart } from './ConsistencyScoreChart';
 import { Card } from './components/Card';
 import { FaFireAlt } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
+import { FaChartLine } from 'react-icons/fa';
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -481,23 +482,27 @@ export const MyDashboard = () => {
         </section>
   
         {/* Consistency Score Chart */}
-        <section
-          style={{
-            marginTop: '2em',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '1.5em',
-          }}
-        >
+<section
+  style={{
+    marginTop: '2em',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '1.5em',
+  }}
+>
+<Card style={{ flex: 1, padding: '1.5em 2em', borderRadius: '20px' }}>
+  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1em' }}>
+    {React.createElement((FaChartLine as unknown) as React.ComponentType<any>, { style: { color: '#e76f51', fontSize: '1.5em', marginRight: '0.5em' } })}
+    <h3 style={{ fontSize: '1.3em', fontWeight: 600, color: '#264653', margin: 0 }}>
+      Consistency Score (past 150 days)
+    </h3>
+  </div>
+  <ConsistencyScoreChart scores={longTermConsistency} />
+</Card>
+</section>
   
-          <div style={{ flex: 1 }}>
-            <h4 style={{ marginBottom: '0.5em' }}>📈 Consistency Score (past 150 days)</h4>
-            <ConsistencyScoreChart scores={longTermConsistency} />
-          </div>
-        </section>
-  
-        {/* Remaining sections (unchanged) */}
+        {/* Engagement Streak */}
         <section style={{ marginTop: '1em' }}>
           <h3>📈 Engagement Streak</h3>
           <p>Active minutes in the last 7 days:</p>
@@ -505,7 +510,8 @@ export const MyDashboard = () => {
             <EngagementStreakChart data={dailyActiveMinutes} />
           </div>
         </section>
-  
+        
+        {/* Time Distribution */}
         <section style={{ marginTop: '2em' }}>
           <h3>📈 Time Distribution</h3>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2em', flexWrap: 'wrap' }}>
@@ -531,6 +537,7 @@ export const MyDashboard = () => {
           </div>
         </section>
   
+        {/* Summary of Work Today */}
         <section style={{ marginTop: '1em' }}>
           <h3>📄 Summary of Work Today</h3>
           {summaries.length === 0 ? (
@@ -547,6 +554,7 @@ export const MyDashboard = () => {
           )}
         </section>
   
+        {/* Personalized Suggestion */}
         <section style={{ marginTop: '1em' }}>
           <h3>🎯 Personalized Suggestion</h3>
           <p>

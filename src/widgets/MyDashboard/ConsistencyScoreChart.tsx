@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
   ResponsiveContainer,
+  CartesianGrid,
 } from 'recharts';
 
 type Props = {
@@ -17,19 +17,38 @@ export const ConsistencyScoreChart: React.FC<Props> = ({ scores }) => {
   return (
     <div style={{ width: '100%', height: 250 }}>
       <ResponsiveContainer>
-        <LineChart data={scores}>
-          <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-          <XAxis dataKey="day" />
-          <YAxis />
-          <Tooltip />
-          <Line
+        <AreaChart data={scores} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          {/* 漸層區域填色 */}
+          <defs>
+            <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#e63946" stopOpacity={0.5} />
+              <stop offset="95%" stopColor="#e63946" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'white',
+              borderRadius: '10px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              fontSize: '14px',
+            }}
+            formatter={(value: number) => [`${value.toFixed(2)}`, 'Consistency']}
+          />
+          <Area
             type="monotone"
             dataKey="value"
             stroke="#e63946"
-            strokeWidth={2}
-            dot={{ r: 2 }}
+            fillOpacity={1}
+            fill="url(#colorScore)"
+            strokeWidth={3}
+            dot={{ r: 3 }}
+            activeDot={{ r: 5 }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
