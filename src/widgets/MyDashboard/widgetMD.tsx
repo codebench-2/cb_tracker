@@ -52,86 +52,76 @@ export const MyDashboard = () => {
           dailyMap[date] = (dailyMap[date] || 0) + (log_info.duration || 0);
         }
       });
-  
+
       // Get last 7 days
       const last7Days: number[] = [];
+      const last7DaysData: { day: string; value: number }[] = [];
+
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
         const key = d.toLocaleDateString();
-        const minutes = Math.round((dailyMap[key] || 0) / 60); // convert to minutes
+        const minutes = Math.round((dailyMap[key] || 0) / 60);
         last7Days.push(minutes);
+        last7DaysData.push({ day: key.slice(0, 5), value: minutes });
       }
-  
       setDailyActiveMinutes(last7Days);
 
-      // Calculate Consistency Score
-      // Parameters
-const expectedEffort = 60; // E: target minutes per day
-const maxBonus = 10;       // B
-const semesterDays = 30;   // T
-const epsilon = 0.01;
-const rMax = 1;
+      // Get last 150 days
+      const last150Days: number[] = [];
+      const last150DaysData: { day: string; value: number }[] = [];
 
-const alpha = 1 - Math.pow(epsilon, 1 / semesterDays);
+      for (let i = 149; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const key = d.toLocaleDateString();
+        const minutes = Math.round((dailyMap[key] || 0) / 60);
+        last150Days.push(minutes);
+        last150DaysData.push({ day: key.slice(0, 5), value: minutes });
+      }
 
-let prevScore = 0;
-const smoothedScores: number[] = [];
+      // Consistency score for 150 days
+      const semesterDays = 150;
+      const expectedEffort = 60;
+      const maxBonus = 10;
+      const epsilon = 0.01;
+      const rMax = 1;
+      const alpha = 1 - Math.pow(epsilon, 1 / semesterDays);
 
-for (let i = 0; i < last7Days.length; i++) {
-  const h = last7Days[i];
-  const r = Math.max(0, Math.min(h / expectedEffort, rMax));
-  let score = (1 - alpha) * prevScore + alpha * r * maxBonus;
-  score = Math.max(0, Math.min(score, maxBonus)); // clamp
-  smoothedScores.push(score);
-  prevScore = score;
-}
+      const smoothedScores: { day: string; value: number }[] = [];
+      let prevScore = 0;
 
-// Use the final score as current consistency score
-const finalScore = smoothedScores[smoothedScores.length - 1];
-setConsistencyScore(finalScore);
+      for (let i = 0; i < last150DaysData.length; i++) {
+        const minutes = last150DaysData[i].value;
+        const r = Math.max(0, Math.min(minutes / expectedEffort, rMax));
+        let score = (1 - alpha) * prevScore + alpha * r * maxBonus;
+        score = Math.max(0, Math.min(score, maxBonus)); // clamp
+        smoothedScores.push({
+          day: last150DaysData[i].day,
+          value: parseFloat(score.toFixed(2)),
+        });
+        prevScore = score;
+      }
 
-      // Calculate consecutive streak based on last7Days where minutes >= 10
+      setLongTermConsistency(smoothedScores); // For chart
+      setConsistencyScore(smoothedScores[smoothedScores.length - 1].value); // Current value
+
+      // Consecutive streak (only use last 7 days)
       let historicalStreak = 0;
-            // First, calculate streak from yesterday backwards (excluding today)
-            for (let i = last7Days.length - 2; i >= 0; i--) {
-                if (last7Days[i] >= 10) {
-                    historicalStreak += 1;
-                }
-                else {
-                    break; // stop counting when a day is inactive
-                }
-            }
-            const todayMinutes = last7Days[last7Days.length - 1];
-            const todayContribution = todayMinutes >= 10 ? 1 : 0;
-
-            let streak = historicalStreak + todayContribution;
-            console.log("Consecutive active streak days:", streak);
-
-      // Update consistencyStreak for your ConsistencyStreak component
+      for (let i = last7Days.length - 2; i >= 0; i--) {
+        if (last7Days[i] >= 10) {
+          historicalStreak += 1;
+        } else {
+          break;
+        }
+      }
+      const todayMinutes = last7Days[last7Days.length - 1];
+      const todayContribution = todayMinutes >= 10 ? 1 : 0;
+      const streak = historicalStreak + todayContribution;
       setConsistencyStreak([{ day: 'Current', value: streak }]);
 
-      const longTerm: { day: string; value: number }[] = [];
-for (let i = 29; i >= 0; i--) {
-  const d = new Date();
-  d.setDate(today.getDate() - i);
-  const key = d.toLocaleDateString();
-  const minutes = Math.round((dailyMap[key] || 0) / 60);
-  longTerm.push({ day: key.slice(0, 5), value: minutes });
-}
-// 用 sliding window 方式计算 consistency score for each day
-const consistencyScores = longTerm.map((_, i, arr) => {
-  if (i < 6) return { day: arr[i].day, value: 0 };
-  const slice = arr.slice(i - 6, i + 1);
-  const vals = slice.map(e => e.value);
-  const mean = vals.reduce((a, b) => a + b, 0) / 7;
-  const variance = vals.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / 7;
-  const stdDev = Math.sqrt(variance);
-  const consistencyFactor = 1 / (1 + (stdDev / mean));
-  const score = mean * consistencyFactor;
-  return { day: arr[i].day, value: parseFloat(score.toFixed(2)) };
-});
-setLongTermConsistency(consistencyScores);
+      // Set engagement chart data (7 days)
+      setDailyActiveMinutes(last7Days); 
     }
 
     loadData();
@@ -348,7 +338,7 @@ useEffect(() => {
           </div>
           {/* Consistency Score Chart */}
           <div style={{ flex: 1 }}>
-    <h4 style={{ marginBottom: '0.5em' }}>📈 Consistency Score (past 30 days)</h4>
+    <h4 style={{ marginBottom: '0.5em' }}>📈 Consistency Score (past 150 days)</h4>
     <ConsistencyScoreChart scores={longTermConsistency} />
   </div>
        </section>
