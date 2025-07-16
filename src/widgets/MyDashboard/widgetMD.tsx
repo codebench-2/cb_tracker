@@ -7,8 +7,9 @@ import { Card } from './components/Card';
 import { FaFireAlt } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
 import { FaChartLine } from 'react-icons/fa';
-import { MdPieChart, MdBarChart } from 'react-icons/md';
+import { MdBarChart } from 'react-icons/md';
 import { FaClipboardList, FaRegClock } from 'react-icons/fa';
+import { COURSE_ID } from '../../common/config';
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -318,8 +319,24 @@ export const MyDashboard = () => {
         }}
       >
         {/* Student Profile Block */}
-        <section style={{ display: 'flex', gap: '2em', marginBottom: '2em' }}>
-        <Card style={{ flex: 1, padding: 0, borderRadius: '20px', overflow: 'hidden' }}>
+        <section
+  style={{
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '2em',
+    marginBottom: '2em',
+    justifyContent: 'space-between',
+  }}
+>
+<Card
+  style={{
+    flex: '1 1 300px', // allow shrinking/growing
+    minWidth: '260px', // prevent too small
+    padding: 0,
+    borderRadius: '20px',
+    overflow: 'hidden',
+  }}
+>
             {/* 🔺 Top Red Section */}
             <div style={{ backgroundColor: '#e63946', padding: '2.5em 0 2em', textAlign: 'center', color: 'white' }}>
               <div
@@ -337,12 +354,8 @@ export const MyDashboard = () => {
     >
       👩‍💻
     </div>
-    <div style={{ fontWeight: 'bold', fontSize: '2em' }}>
-  {student ? student.name : 'Loading...'}
-</div>
-<div style={{ fontSize: '1.5em', color: '#fcd5d5' }}>
-  {student ? student.net_id : ''}
-</div>
+    <div style={{ fontWeight: 'bold', fontSize: '2em' }}>{student ? student.name : 'Loading...'}</div>
+    <div style={{ fontSize: '1.5em', color: '#fcd5d5' }}>{COURSE_ID}</div>
   </div>
 
 {/* 🔻 Bottom White Section */}
@@ -394,21 +407,29 @@ export const MyDashboard = () => {
 </Card>
 
 {/* 🎯 Goal Planner row */}
-<div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5em' }}>
+<div
+  style={{
+    flex: '1 1 300px',
+    minWidth: '260px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.5em',
+  }}
+>
   {/* Goal Planner (上半區塊) */}
   <Card
-    style={{
-      padding: '2.5em 2em',
-      borderRadius: '20px',
-      backgroundColor: '#fffaf0',
-      border: '3px solid #ffcb69',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      gap: '1.2em',
-    }}
-  >
+  style={{
+    padding: '2.5em 2em',
+    borderRadius: '20px',
+    backgroundColor: '#fffaf0',
+    border: '3px solid #ffcb69',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: '1.2em',
+  }}
+>
     <div
       style={{
         fontSize: '1.6em',
@@ -460,9 +481,17 @@ export const MyDashboard = () => {
   </Card>
 
   {/* League + Last Notebook */}
-  <div style={{ display: 'flex', gap: '1.5em' }}>
+  <div
+  style={{
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '1.5em',
+    width: '100%',
+    justifyContent: 'space-between',
+  }}
+>
   {/* League Card */}
-  <div style={{ flex: 1 }}>
+  <div style={{ flex: '1 1 250px', minWidth: '230px' }}>
     <Card
       style={{
         position: 'relative',
@@ -511,7 +540,7 @@ export const MyDashboard = () => {
 
   {/* Last Notebook Card */}
   <div
-    style={{ flex: 1, cursor: lastNotebookPath ? 'pointer' : 'default' }}
+    style={{ flex: '1 1 250px', cursor: lastNotebookPath ? 'pointer' : 'default' }}
     onClick={() => {
       if (lastNotebookPath) window.open(lastNotebookPath, '_blank');
     }}
@@ -631,9 +660,15 @@ style={{
   {activebookChartData.length > 0 && (
     <Card style={{ flex: '1 1 45%', padding: '1.5em 2em', borderRadius: '20px', border: '2px solid #f4a261', boxShadow: '4px 4px 12px rgba(0,0,0,0.08)', background: 'white' }}>
              <h2 style={{ color: '#264653', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5em' }}>
-         {React.createElement((MdPieChart as unknown) as React.ComponentType<any>, { style: { color: '#e63946' } })}
+         {React.createElement((MdBarChart as unknown) as React.ComponentType<any>, { style: { color: '#e76f51' } })}
          Time Distribution for Activebook
        </h2>
+
+       {/* Total Time Summary */}
+    <p style={{ marginTop: '-0.5em', marginBottom: '1em', color: '#555', fontSize: '1.3em' }}>
+      Total Active Time: {activebookChartData.reduce((sum, entry) => sum + entry.minutes, 0).toFixed(1)} min
+    </p>
+
       <WorkSummaryChart data={activebookChartData as any} />
     </Card>
   )}
@@ -644,6 +679,12 @@ style={{
          {React.createElement((MdBarChart as unknown) as React.ComponentType<any>, { style: { color: '#2a9d8f' } })}
          Time Distribution for Assignments and Others
        </h2>
+
+       {/* Total Time Summary */}
+    <p style={{ marginTop: '-0.5em', marginBottom: '1em', color: '#555', fontSize: '1.3em' }}>
+      Total Active Time: {regularChartData.reduce((sum, entry) => sum + entry.minutes, 0).toFixed(1)} min
+    </p>
+
       <WorkSummaryChart data={regularChartData as any} />
     </Card>
   )}
