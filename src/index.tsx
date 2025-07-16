@@ -960,9 +960,6 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
       try {
         const now = Date.now();
         if (now - lastCopyPasteAlert > COPY_PASTE_ALERT_INTERVAL) {
-          alert(
-            '📋 Heads up: Your copy/paste activity is being recorded for your learning analytics.'
-          );
           lastCopyPasteAlert = now;
         }
 

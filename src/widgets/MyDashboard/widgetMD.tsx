@@ -8,7 +8,7 @@ import { FaFireAlt } from 'react-icons/fa';
 import styled, { keyframes } from 'styled-components';
 import { FaChartLine } from 'react-icons/fa';
 import { MdPieChart, MdBarChart } from 'react-icons/md';
-import { FaClipboardList } from 'react-icons/fa';
+import { FaClipboardList, FaRegClock } from 'react-icons/fa';
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -40,6 +40,19 @@ export const MyDashboard = () => {
   const [longTermConsistency, setLongTermConsistency] = useState<{ day: string; value: number }[]>([]);
   const [lastNotebookPath, setLastNotebookPath] = useState<string | null>(null);
   const [lastNotebookTitle, setLastNotebookTitle] = useState<string | null>(null);
+  const [student, setStudent] = useState<{ name: string; net_id: string; email: string } | null>(null);
+
+  // For student profile
+  useEffect(() => {
+    fetch('http://localhost:8888/cb-server/students')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data.length > 0) {
+          setStudent(data.data[0]);
+        }
+      })
+      .catch(err => console.error('Failed to fetch student:', err));
+  }, []);  
 
   // For last notebook
   useEffect(() => {
@@ -177,13 +190,28 @@ export const MyDashboard = () => {
       const notebookSummary: Record<string, { duration: number; latestTimestamp: number }> = {};
       const minutesByActivebook: Record<string, number> = {};
       const minutesByRegular: Record<string, number> = {};
+      
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const tomorrowStart = new Date(todayStart);
+      tomorrowStart.setDate(todayStart.getDate() + 1);
 
       logs.forEach((log: any) => {
         const { log_info, time_stamp } = log;
-        if (log_info.type === 'window') {
+        const ts = new Date(time_stamp);
+
+        // Today's window time
+        if (log_info.type === 'window' && ts >= todayStart && ts < tomorrowStart) {
           totalLabTime += log_info.duration;
         }
-        if (log_info.type === 'notebook' && log_info.notebook_id) {
+
+        // Today's notebook time
+        if (
+          log_info.type === 'notebook' &&
+          log_info.notebook_id &&
+          ts >= todayStart &&
+          ts < tomorrowStart
+        ) {
           const name = log_info.name || log_info.notebook_id;
           const type = (log.notebook_type || '').toLowerCase(); // 'activebook' or 'regular'
 
@@ -252,6 +280,33 @@ export const MyDashboard = () => {
 
   return (
     <>
+         <style
+     dangerouslySetInnerHTML={{
+       __html: `
+         @keyframes shine {
+           to {
+             background-position: -200% center;
+           }
+         }
+         @keyframes pulse {
+           0%, 100% {
+             opacity: 1;
+           }
+           50% {
+             opacity: 0.5;
+           }
+         }
+         @keyframes spin {
+           0% {
+             transform: rotate(0deg);
+           }
+           100% {
+             transform: rotate(360deg);
+           }
+         }
+       `
+     }}
+   />
       <div
         style={{
           backgroundColor: '#fff3f0',
@@ -282,8 +337,12 @@ export const MyDashboard = () => {
     >
       👩‍💻
     </div>
-    <div style={{ fontWeight: 'bold', fontSize: '1.6em' }}>Fiona Lai</div>
-    <div style={{ fontSize: '1.1em', color: '#fcd5d5' }}>Rutgers CS210</div>
+    <div style={{ fontWeight: 'bold', fontSize: '2em' }}>
+  {student ? student.name : 'Loading...'}
+</div>
+<div style={{ fontSize: '1.5em', color: '#fcd5d5' }}>
+  {student ? student.net_id : ''}
+</div>
   </div>
 
 {/* 🔻 Bottom White Section */}
@@ -310,12 +369,27 @@ export const MyDashboard = () => {
   </div>
 
   {/* Right: Study Minutes */}
-  <div style={{ textAlign: 'right', color: '#333' }}>
-    <div style={{ marginBottom: '0.2em' }}>Today's Study</div>
-    <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#2a9d8f' }}>
-      {(labTime / 60).toFixed(1)} mins
-    </div>
+  
+{/* Right: Study Minutes */}
+<div style={{ textAlign: 'right', color: '#333' }}>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: '0.5em',
+      marginBottom: '0.2em',
+    }}
+  >
+         {React.createElement((FaRegClock as unknown) as React.ComponentType<any>, { style: { color: '#14b8a6', fontSize: '1.5em', animation: 'spin 2s linear infinite' } })}
+    <span style={{ fontSize: '1em' }}>Today's Study</span>
   </div>
+  <div style={{ fontSize: '2em', fontWeight: 'bold', color: '#2a9d8f' }}>
+    {labTime / 60 >= 60
+      ? `${(labTime / 3600).toFixed(1)} hrs`
+      : `${(labTime / 60).toFixed(1)} mins`}
+  </div>
+</div>
 </div>
 </Card>
 
@@ -387,97 +461,112 @@ export const MyDashboard = () => {
 
   {/* League + Last Notebook */}
   <div style={{ display: 'flex', gap: '1.5em' }}>
-    {/* League Card */}
+  {/* League Card */}
+  <div style={{ flex: 1 }}>
     <Card
       style={{
-        flex: 1,
-        height: '100px',
-        padding: '1em 1.5em',
+        position: 'relative',
+        height: '110px',
+        padding: '0.8em 1em',
         borderRadius: '16px',
-        backgroundColor: '#f7fef7',
-        border: '2px solid #a5d6a7',
-        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+        backgroundColor: '#f3fff5',
+        border: '2px solid #81c784',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
       }}
     >
+      {/* 📈 Icon in Top Left */}
       <div
         style={{
-          width: '60px',
-          height: '60px',
-          border: '2px solid #4caf50',
-          background: '#e8f5e9',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 600,
-          color: '#388e3c',
-          fontSize: '1em',
+          position: 'absolute',
+          top: '0.6em',
+          left: '0.8em',
+          fontSize: '4em',
         }}
       >
-        League
+        📈
       </div>
-      <div style={{ textAlign: 'right', flex: 1, marginLeft: '1em' }}>
-        <div
-          style={{
-            fontSize: '1.8em',
-            fontWeight: 'bold',
-            color: '#6a1b9a',
-            lineHeight: 1,
-          }}
-        >
-          {consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
-        </div>
-        <div style={{ fontSize: '1em', color: '#6a1b9a', marginTop: '0.2em' }}>
-          Consistency Score
-        </div>
-      </div>
-    </Card>
 
-    {/* Last Notebook */}
-    <div
-      style={{ flex: 1, cursor: lastNotebookPath ? 'pointer' : 'default' }}
-      onClick={() => {
-        if (lastNotebookPath) {
-          window.open(lastNotebookPath, '_blank');
-        }
-      }}
-    >
-      <Card
+      {/* Text content in center */}
+      <div
         style={{
-          height: '100px',
-          padding: '1em 1.5em',
-          borderRadius: '16px',
-          backgroundColor: '#eef2ff',
-          border: '2px solid #9fa8da',
-          boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
+          marginLeft: '25%',
+          width: '75%',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          gap: '0.6em',
         }}
       >
-        <div style={{ fontSize: '1em', color: '#3f51b5', fontWeight: 'bold' }}>
-          📘 Last Opened Notebook
+        <div style={{ marginLeft: '4em', paddingTop: '0.5em' }}>
+        <div style={{ fontSize: '1.7em', fontWeight: 600, color: '#2e7d32' }}>
+          Consistency Score
         </div>
-        <div
-          style={{
-            fontSize: '1.1em',
-            fontWeight: 500,
-            color: '#1a237e',
-            wordBreak: 'break-all',
-          }}
-        >
+        <div style={{ fontSize: '3em', fontWeight: 'bold', color: '#6a1b9a' }}>
+          {consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
+        </div>
+        </div>
+      </div>
+    </Card>
+  </div>
+
+  {/* Last Notebook Card */}
+  <div
+    style={{ flex: 1, cursor: lastNotebookPath ? 'pointer' : 'default' }}
+    onClick={() => {
+      if (lastNotebookPath) window.open(lastNotebookPath, '_blank');
+    }}
+  >
+    <Card
+      style={{
+        position: 'relative',
+        height: '110px',
+        padding: '0.8em 1em',
+        borderRadius: '16px',
+        backgroundColor: '#f3f6ff',
+        border: '2px solid #90caf9',
+        display: 'flex',
+        alignItems: 'center',
+      }}
+    >
+      {/* 📘 Icon in Top Left */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '0.6em',
+          left: '0.8em',
+          fontSize: '4em',
+        }}
+      >
+        📘
+      </div>
+
+      {/* Text content in center */}
+      <div
+        style={{
+          marginLeft: '25%',
+          width: '75%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ marginLeft: '4em', paddingTop: '0.5em' }}>
+        <div style={{ fontSize: '1.7em', fontWeight: 600, color: '#1a237e' }}>
+          Last Opened Notebook
+        </div>
+        <div style={{ fontSize: '1.1em', color: '#1a237e' }}>
           {lastNotebookTitle || 'No notebook yet'}
         </div>
-        <div style={{ fontSize: '0.85em', color: '#5c6bc0' }}>
-          {lastNotebookPath ? 'Click to open' : ''}
+        {lastNotebookPath && (
+          <div style={{ fontSize: '0.9em', color: '#5c6bc0' }}>
+            Click to open
+          </div>
+        )}
         </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
   </div>
+</div>
 </div>
   
         </section>
@@ -609,18 +698,20 @@ style={{
         {/* Personalized Suggestion */}
         <section style={{ textAlign: 'center', marginTop: '5em', marginBottom: '4em' }}>
   <h2
-    style={{
-      fontSize: '2em',
-      fontWeight: 800,
-      color: '#1f2937',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: '0.5em',
-    }}
-  >
-    🎯 Personalized Suggestion
-  </h2>
+  style={{
+    fontSize: '2.5em',
+    fontWeight: 800,
+    background: 'linear-gradient(90deg, #00bcd4, #3f51b5, #9c27b0)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundSize: '200% auto',
+    animation: 'shine 3s linear infinite',
+    display: 'block',
+    marginBottom: '0.5em',
+  }}
+>
+  Personalized Suggestion
+</h2>
 
   {labTime >= 600 ? (
     <>

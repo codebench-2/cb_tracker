@@ -1,7 +1,8 @@
 // src/widgets/MyDashboard/WorkSummaryChart.tsx
 import React from 'react';
 import {
-  PieChart, Pie, Cell, Tooltip, Legend,
+  PieChart, Pie, Cell,
+  Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer
 } from 'recharts';
@@ -22,7 +23,7 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Time Distribution Pie Chart */}
+      Time Distribution Pie Chart
       <div style={{ width: '100%', height: 300 }}>
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
