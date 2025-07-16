@@ -1,5 +1,10 @@
 // src/widgets/MyDashboard/WorkSummaryChart.tsx
 import React from 'react';
+// import {
+//   PieChart, Pie, Cell, Tooltip, Legend,
+//   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+//   ResponsiveContainer
+// } from 'recharts';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
