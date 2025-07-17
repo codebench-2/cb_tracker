@@ -530,7 +530,7 @@ export const MyDashboard = () => {
         <div style={{ fontSize: '1.7em', fontWeight: 600, color: '#2e7d32' }}>
           Consistency Score
         </div>
-        <div style={{ fontSize: '3em', fontWeight: 'bold', color: '#6a1b9a' }}>
+        <div style={{ fontSize: '3em', fontWeight: 'bold', color: '#43a047' }}>
           {consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
         </div>
         </div>
