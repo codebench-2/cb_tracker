@@ -620,7 +620,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
           try {
             const model = panel.content.model;
             const metadata = model?.metadata ? (model.metadata as any) : {};
-            if (String(metadata?.activebook).toLowerCase() === 'true') {
+            if (metadata?.activebook == true) {
               type = 'activebook';
             }
           } catch (error) {
@@ -1305,13 +1305,13 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
       }
     });
 
-    // Inactivity checker - ends session after 2 minutes
+    // Inactivity checker - ends session after 1 minutes
     setInterval(() => {
       const now = Date.now();
       const idleTime = now - lastActivityTimestamp;
 
-      // Pause tracking after 2 minutes
-      if (idleTime > 2 * 60 * 1000 && !trackingPaused) {
+      // Pause tracking after 1 minutes
+      if (idleTime > 1 * 60 * 1000 && !trackingPaused) {
         trackingPaused = true;
         console.log('⏸️ Active Reading Tracker paused due to inactivity.');
 
