@@ -10,6 +10,7 @@ import { FaChartLine } from 'react-icons/fa';
 import { MdBarChart } from 'react-icons/md';
 import { FaClipboardList, FaRegClock } from 'react-icons/fa';
 import { COURSE_ID } from '../../common/config';
+import { TbTargetArrow } from 'react-icons/tb';
 import { LuRabbit } from 'react-icons/lu';
 import {
   FaMouse,
@@ -23,6 +24,11 @@ import {
   GiEagleEmblem,
   GiBookCover
 } from 'react-icons/gi';
+
+const iconStyle: React.CSSProperties = {
+  animation: 'goalPulse 1.8s infinite ease-in-out',
+  color: '#e76f51',
+};
 
 const bookFlip = keyframes`
   0% { transform: rotateY(0deg); }
@@ -497,10 +503,12 @@ export const MyDashboard = () => {
       alignItems: 'center',
       justifyContent: 'center',
       gap: '0.4em',
+      marginBottom: '0.6em',
     }}
-  >
-    🎯 Goal Planner
-  </div>
+      >
+      {React.createElement((TbTargetArrow as unknown) as React.ComponentType<any>, { style: iconStyle })}
+      Goal Planner
+    </div>
 
   {/* Set Goal + Bonus row */}
 <div
@@ -513,6 +521,7 @@ export const MyDashboard = () => {
   }}
 >
   {/* Goal input */}
+<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
   <div style={{ display: 'flex', alignItems: 'center' }}>
     <span style={{ fontWeight: 'bold', color: '#2a9d8f', marginRight: '0.5em' }}>
       Set Study Goal:
@@ -524,10 +533,7 @@ export const MyDashboard = () => {
       disabled={isGoalLocked}
       onChange={e => {
         const value = Number(e.target.value);
-        const fixedValue = value < 30 ? 30 : value;
-        setTargetMinutes(fixedValue);
-        localStorage.setItem(todayKey, fixedValue.toString());
-        setIsGoalLocked(true);
+        setTargetMinutes(value < 30 ? 30 : value);
       }}
       style={{
         width: '60px',
@@ -538,18 +544,42 @@ export const MyDashboard = () => {
         margin: '0 0.5em',
       }}
     />
-    <span style={{ color: '#2a9d8f' }}>mins</span>
+    <span style={{ color: '#2a9d8f', marginRight: '0.3em' }}>mins</span>
+    {!isGoalLocked ? (
+      <button
+        onClick={() => {
+          localStorage.setItem(todayKey, targetMinutes.toString());
+          setIsGoalLocked(true);
+          alert("Goal locked for today.");
+        }}
+        style={{
+          padding: '0.2em 0.6em',
+          fontSize: '0.9em',
+          backgroundColor: '#2a9d8f',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+        }}
+      >
+        ✔
+      </button>
+    ) : (
+      <span style={{ marginLeft: '0.5em', color: '#888', fontSize: '0.9em' }}>
+        (Locked for today)
+      </span>
+    )}
   </div>
+</div>
 
   {/* Bonus */}
   <div style={{ fontWeight: 'bold', color: '#2a9d8f' }}>
-    Bonus:{' '}
-    <span style={{ fontSize: '1.5em', color: '#e76f51' }}>+{bonusPoints}</span>
+    Bonus: <span style={{ fontSize: '1.5em', color: '#e76f5f1' }}>+{bonusPoints}</span>
   </div>
 </div>
 
   {/* Status Bar */}
-<div style={{ marginTop: '1em' }}>
+<div style={{ marginTop: '0.05em' }}>
   <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '0.3em', color: '#2a9d8f' }}>
     <span>Status:</span>{' '}
     <span style={{ color: (labTime / 60 >= targetMinutes) ? '#2e7d32' : '#e63946' }}>
