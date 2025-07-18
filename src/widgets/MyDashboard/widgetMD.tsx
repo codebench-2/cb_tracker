@@ -524,7 +524,7 @@ export const MyDashboard = () => {
 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
   <div style={{ display: 'flex', alignItems: 'center' }}>
     <span style={{ fontWeight: 'bold', color: '#2a9d8f', marginRight: '0.5em' }}>
-      Set Study Goal:
+      Set Today's Study Goal:
     </span>
     <input
       type="number"
