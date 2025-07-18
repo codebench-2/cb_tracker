@@ -10,6 +10,64 @@ import { FaChartLine } from 'react-icons/fa';
 import { MdBarChart } from 'react-icons/md';
 import { FaClipboardList, FaRegClock } from 'react-icons/fa';
 import { COURSE_ID } from '../../common/config';
+import { LuRabbit } from 'react-icons/lu';
+import {
+  FaMouse,
+  FaDog,
+  FaHorse,
+  FaDragon
+} from 'react-icons/fa';
+import {
+  GiSnakeTotem,
+  GiTigerHead,
+  GiEagleEmblem,
+  GiBookCover
+} from 'react-icons/gi';
+
+const bookFlip = keyframes`
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(15deg); }
+  100% { transform: rotateY(0deg); }
+`;
+
+const AnimatedBookIcon = styled.div<{ color?: string }>`
+  font-size: 4em;
+  color: ${({ color }) => color || '#1a237e'};
+  animation: ${bookFlip} 2s infinite ease-in-out;
+`;
+
+function getBadge(streak: number): { icon: React.ReactNode; color: string } {
+  if (streak >= 150) return { icon: React.createElement((FaDragon as unknown) as React.ComponentType<any>), color: '#6a1b9a' };        // Dragon
+  if (streak >= 60)  return { icon: React.createElement((GiEagleEmblem as unknown) as React.ComponentType<any>), color: '#2196f3' };   // Eagle
+  if (streak >= 30)  return { icon: React.createElement((FaHorse as unknown) as React.ComponentType<any>), color: '#a65628' };         // Horse
+  if (streak >= 15)  return { icon: React.createElement((GiTigerHead as unknown) as React.ComponentType<any>), color: '#fb8c00' };     // Tiger
+  if (streak >= 8)   return { icon: React.createElement((GiSnakeTotem as unknown) as React.ComponentType<any>), color: '#43a047' };    // Snake
+  if (streak >= 4)   return { icon: React.createElement((FaDog as unknown) as React.ComponentType<any>), color: '#f4a261' };           // Dog
+  if (streak >= 1)   return { icon: React.createElement((LuRabbit as unknown) as React.ComponentType<any>), color: '#F6AD55' };        // Rabbit
+  return { icon: React.createElement((FaMouse as unknown) as React.ComponentType<any>), color: '#8884d8' };                            // Mouse
+}
+
+function getLevelNumber(streak: number): string {
+  if (streak >= 150) return 'VIII'; // Dragon
+  if (streak >= 60) return 'VII';   // Eagle
+  if (streak >= 30) return 'VI';    // Horse
+  if (streak >= 15) return 'V';     // Tiger
+  if (streak >= 8) return 'IV';     // Snake
+  if (streak >= 4) return 'III';    // Dog
+  if (streak >= 1) return 'II';     // Rabbit
+  return 'I';                       // Mouse
+}
+
+const badgePulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.9; }
+`;
+
+const BadgeIcon = styled.div<{ color: string }>`
+  color: ${p => p.color};
+  animation: ${badgePulse} 1.5s infinite;
+  font-size: 3em;
+`;
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -76,11 +134,11 @@ export const MyDashboard = () => {
   // For Goal Planner
   useEffect(() => {
     if (todayMinutes >= targetMinutes && !goalAwarded) {
-      setGoalStatus('🎉 Goal achieved! Bonus +1');
+      setGoalStatus('Goal achieved! 🎉');
       setBonusPoints(prev => prev + 1);
       setGoalAwarded(true);
     } else if (todayMinutes < targetMinutes) {
-      setGoalStatus('❌ Below goal');
+      setGoalStatus('Below goal 😭');
       setGoalAwarded(false);
     }
   }, [todayMinutes, targetMinutes, goalAwarded]);
@@ -98,7 +156,7 @@ export const MyDashboard = () => {
   
       logs.forEach((log: any) => {
         const { log_info, time_stamp } = log;
-        if (['window', 'notebook', 'cell'].includes(log_info.type)) {
+        if (['window'].includes(log_info.type)) {
           const date = new Date(time_stamp).toLocaleDateString();
           dailyMap[date] = (dailyMap[date] || 0) + (log_info.duration || 0);
         }
@@ -157,21 +215,21 @@ export const MyDashboard = () => {
       setLongTermConsistency(smoothedScores); // For chart
       setConsistencyScore(smoothedScores[smoothedScores.length - 1].value); // Current value
 
-      // Consecutive streak (only use last 7 days)
+      // Learning streak (150 days)
       let historicalStreak = 0;
-      for (let i = last7Days.length - 2; i >= 0; i--) {
-        if (last7Days[i] >= 10) {
+      for (let i = last150Days.length - 2; i >= 0; i--) {
+        if (last150Days[i] >= 10) {
           historicalStreak += 1;
         } else {
           break;
         }
       }
-      const todayMinutes = last7Days[last7Days.length - 1];
+      const todayMinutes = last150Days[last150Days.length - 1];
       const todayContribution = todayMinutes >= 10 ? 1 : 0;
       const streak = historicalStreak + todayContribution;
       setConsistencyStreak([{ day: 'Current', value: streak }]);
 
-      // Set engagement chart data (7 days)
+      // Engagement time chart data (7 days)
       setDailyActiveMinutes(last7Days); 
     }
 
@@ -430,54 +488,85 @@ export const MyDashboard = () => {
     gap: '1.2em',
   }}
 >
+<div
+    style={{
+      fontSize: '2em',
+      fontWeight: 'bold',
+      color: '#e76f51',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.4em',
+    }}
+  >
+    🎯 Goal Planner
+  </div>
+
+  {/* Set Goal + Bonus row */}
+<div
+  style={{
+    fontSize: '1.2em',
+    color: '#444',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  }}
+>
+  {/* Goal input */}
+  <div style={{ display: 'flex', alignItems: 'center' }}>
+    <span style={{ fontWeight: 'bold', color: '#2a9d8f', marginRight: '0.5em' }}>
+      Set Study Goal:
+    </span>
+    <input
+      type="number"
+      value={targetMinutes}
+      min={30}
+      disabled={isGoalLocked}
+      onChange={e => {
+        const value = Number(e.target.value);
+        const fixedValue = value < 30 ? 30 : value;
+        setTargetMinutes(fixedValue);
+        localStorage.setItem(todayKey, fixedValue.toString());
+        setIsGoalLocked(true);
+      }}
+      style={{
+        width: '60px',
+        padding: '0.4em',
+        fontSize: '1em',
+        border: '1px solid #ccc',
+        borderRadius: '6px',
+        margin: '0 0.5em',
+      }}
+    />
+    <span style={{ color: '#2a9d8f' }}>mins</span>
+  </div>
+
+  {/* Bonus */}
+  <div style={{ fontWeight: 'bold', color: '#2a9d8f' }}>
+    Bonus:{' '}
+    <span style={{ fontSize: '1.5em', color: '#e76f51' }}>+{bonusPoints}</span>
+  </div>
+</div>
+
+  {/* Status Bar */}
+<div style={{ marginTop: '1em' }}>
+  <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '0.3em', color: '#2a9d8f' }}>
+    <span>Status:</span>{' '}
+    <span style={{ color: (labTime / 60 >= targetMinutes) ? '#2e7d32' : '#e63946' }}>
+      {goalStatus}
+    </span>
+  </div>
+  <div style={{ background: '#eee', height: '20px', borderRadius: '10px', overflow: 'hidden' }}>
     <div
       style={{
-        fontSize: '1.6em',
-        fontWeight: 'bold',
-        color: '#e76f51',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.4em',
+        height: '100%',
+        width: `${Math.min((labTime / 60 / targetMinutes) * 100, 100)}%`,
+        backgroundColor: (labTime / 60 >= targetMinutes) ? '#43a047' : '#e63946',
+        transition: 'width 0.5s ease'
       }}
-    >
-      🎯 Goal Planner
-    </div>
-
-    <div style={{ fontSize: '1.2em', color: '#444' }}>
-      <div style={{ marginBottom: '0.7em' }}>
-        <strong>Target:</strong> Study{' '}
-        <input
-          type="number"
-          value={targetMinutes}
-          min={30}
-          disabled={isGoalLocked}
-          onChange={e => {
-            const value = Number(e.target.value);
-            const fixedValue = value < 30 ? 30 : value;
-            setTargetMinutes(fixedValue);
-            localStorage.setItem(todayKey, fixedValue.toString());
-            setIsGoalLocked(true);
-          }}
-          style={{
-            width: '60px',
-            padding: '0.4em',
-            fontSize: '1em',
-            border: '1px solid #ccc',
-            borderRadius: '6px',
-            margin: '0 0.4em',
-          }}
-        />{' '}
-        mins
-      </div>
-      <div style={{ marginBottom: '0.7em' }}>
-        <strong>Status:</strong>{' '}
-        <span style={{ color: 'green', fontWeight: 'bold' }}>{goalStatus}</span>
-      </div>
-      <div>
-        <strong>Bonus:</strong>{' '}
-        <span style={{ color: '#e76f51', fontWeight: 'bold' }}>{bonusPoints}</span>
-      </div>
-    </div>
+    />
+  </div>
+</div>
   </Card>
 
   {/* League + Last Notebook */}
@@ -504,17 +593,33 @@ export const MyDashboard = () => {
         alignItems: 'center',
       }}
     >
-      {/* 📈 Icon in Top Left */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '0.6em',
-          left: '0.8em',
-          fontSize: '4em',
-        }}
-      >
-        📈
-      </div>
+        {/* Dynamic Animal Badge in Top Left */}
+<div
+  style={{
+    position: 'absolute',
+    top: '50%',
+    left: '5.75em', // 拉近中線
+    transform: 'translate(-50%, -50%)',
+    textAlign: 'center',
+  }}
+>
+  <BadgeIcon
+    color={getBadge(consistencyStreak[0]?.value || 0).color}
+    style={{ fontSize: '4.8em' }}
+  >
+    {getBadge(consistencyStreak[0]?.value || 0).icon}
+  </BadgeIcon>
+  <div
+    style={{
+      fontSize: '1.3em',
+      fontWeight: 'bold',
+      color: getBadge(consistencyStreak[0]?.value || 0).color,
+      marginTop: '0.1em',
+    }}
+  >
+    {getLevelNumber(consistencyStreak[0]?.value || 0)}
+  </div>
+</div>
 
       {/* Text content in center */}
       <div
@@ -532,6 +637,7 @@ export const MyDashboard = () => {
         </div>
         <div style={{ fontSize: '3em', fontWeight: 'bold', color: '#43a047' }}>
           {consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
+          <span style={{ fontSize: '0.5em', color: '#81c784', marginLeft: '0.1em' }}>/10</span>
         </div>
         </div>
       </div>
@@ -539,62 +645,67 @@ export const MyDashboard = () => {
   </div>
 
   {/* Last Notebook Card */}
-  <div
-    style={{ flex: '1 1 250px', cursor: lastNotebookPath ? 'pointer' : 'default' }}
-    onClick={() => {
-      if (lastNotebookPath) window.open(lastNotebookPath, '_blank');
+<div style={{ flex: '1 1 250px' }}>
+  <Card
+    style={{
+      position: 'relative',
+      height: '110px',
+      padding: '0.8em 1em',
+      borderRadius: '16px',
+      backgroundColor: '#f3f6ff',
+      border: '2px solid #90caf9',
+      display: 'flex',
+      alignItems: 'center',
     }}
   >
-    <Card
+
+    {/* Animated Book Icon */}
+  <AnimatedBookIcon 
+    style={{
+      position: 'absolute',
+      top: '0.36em',
+      left: '0.4em',
+      fontSize: '6em',
+    }}
+  >
+    {React.createElement((GiBookCover as unknown) as React.ComponentType<any>)}
+  </AnimatedBookIcon>
+
+    {/* Text content in center */}
+    <div
       style={{
-        position: 'relative',
-        height: '110px',
-        padding: '0.8em 1em',
-        borderRadius: '16px',
-        backgroundColor: '#f3f6ff',
-        border: '2px solid #90caf9',
+        marginLeft: '25%',
+        width: '75%',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
+        justifyContent: 'center',
       }}
     >
-      {/* 📘 Icon in Top Left */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '0.6em',
-          left: '0.8em',
-          fontSize: '4em',
-        }}
-      >
-        📘
-      </div>
-
-      {/* Text content in center */}
-      <div
-        style={{
-          marginLeft: '25%',
-          width: '75%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}
-      >
-        <div style={{ marginLeft: '4em', paddingTop: '0.5em' }}>
+      <div style={{ marginLeft: '4em', paddingTop: '0.5em' }}>
         <div style={{ fontSize: '1.7em', fontWeight: 600, color: '#1a237e' }}>
           Last Opened Notebook
         </div>
-        <div style={{ fontSize: '1.1em', color: '#1a237e' }}>
+
+        <div style={{ height: '0.6em' }} />
+
+        {/* Notebook name */}
+        <div
+          style={{
+            fontSize: '1.1em',
+            color: lastNotebookPath ? '#1a237e' : '#aaa',
+            textDecoration: lastNotebookPath ? 'underline' : 'none',
+            cursor: lastNotebookPath ? 'pointer' : 'default',
+          }}
+          onClick={() => {
+            if (lastNotebookPath) window.open(lastNotebookPath, '_blank');
+          }}
+        >
           {lastNotebookTitle || 'No notebook yet'}
         </div>
-        {lastNotebookPath && (
-          <div style={{ fontSize: '0.9em', color: '#5c6bc0' }}>
-            Click to open
-          </div>
-        )}
-        </div>
       </div>
-    </Card>
-  </div>
+    </div>
+  </Card>
+</div>
 </div>
 </div>
   
@@ -646,7 +757,7 @@ style={{
   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5em' }}>
     {React.createElement((FaChartLine as unknown) as React.ComponentType<any>, { size: 22, style: { color: '#2a9d8f', marginRight: '0.5em' } })}
     <h3 style={{ fontSize: '1.3em', fontWeight: 600, color: '#264653', margin: '0.5em'}}>
-      Engagement Streak (active time per day)
+      Engagement Time (active time per day)
     </h3>
   </div>
   <div style={{ height: '250px' }}>
