@@ -62,7 +62,7 @@ export const WorkSummaryChart = ({ data }: { data: FileSummary[] }) => {
                 label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip />
-              <Bar dataKey="minutes">
+              <Bar dataKey="minutes" radius={[10, 10, 0, 0]}>
                 {data.map((entry, index) => (
                   <Cell key={`bar-${index}`} fill={nameColorMap[entry.name]} />
                 ))}
