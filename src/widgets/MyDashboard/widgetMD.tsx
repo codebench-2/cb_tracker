@@ -603,7 +603,7 @@ export const MyDashboard = () => {
                   TbTargetArrow as unknown as React.ComponentType<any>,
                   { style: iconStyle }
                 )}
-                Goal Planner
+                Day Planner
               </div>
 
               {/* Set Goal + Bonus row */}
