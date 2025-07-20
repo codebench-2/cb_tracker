@@ -35,7 +35,7 @@ export const EngagementStreakChart: React.FC<EngagementStreakChartProps> = ({ da
         <YAxis label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
         <Tooltip formatter={(value) => `${value} min`} />
         <Area
-          type="natural"
+          type="monotone"
           dataKey="minutes"
           stroke="#2a9d8f"
           strokeWidth={3}
