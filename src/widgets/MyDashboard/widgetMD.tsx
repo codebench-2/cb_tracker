@@ -215,7 +215,7 @@ export const MyDashboard = () => {
         const d = new Date();
         d.setDate(today.getDate() - i);
         const key = d.toLocaleDateString();
-        const minutes = Math.round((dailyMap[key] || 0) / 60);
+        const minutes = parseFloat(((dailyMap[key] || 0) / 60).toFixed(1));
         last7Days.push(minutes);
         last7DaysData.push({ day: key.slice(0, 5), value: minutes });
       }
