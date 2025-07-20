@@ -620,7 +620,7 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
           try {
             const model = panel.content.model;
             const metadata = model?.metadata ? (model.metadata as any) : {};
-            if (metadata?.activebook == true) {
+            if (metadata?.activebook == true || metadata?.activebook == 'true') {
               type = 'activebook';
             }
           } catch (error) {
