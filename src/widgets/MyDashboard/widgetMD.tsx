@@ -133,15 +133,164 @@ export const MyDashboard = () => {
   const [longTermConsistency, setLongTermConsistency] = useState<
     { day: string; value: number }[]
   >([]);
-  const [lastNotebookPath, setLastNotebookPath] = useState<string | null>(null);
-  const [lastNotebookTitle, setLastNotebookTitle] = useState<string | null>(
-    null
-  );
+  // const [lastNotebookPath, setLastNotebookPath] = useState<string | null>(null);
+  // const [lastNotebookTitle, setLastNotebookTitle] = useState<string | null>(
+  //   null
+  // );
   const [student, setStudent] = useState<{
     name: string;
     net_id: string;
     email: string;
   } | null>(null);
+
+  const fetchDashboardData = async () => {
+    const logs = await fetchLogsFromCodeBench();
+  
+    // ----- Student Info -----
+    const studentRes = await fetch('http://localhost:8888/cb-server/students');
+    const studentData = await studentRes.json();
+    if (studentData.success && studentData.data.length > 0) {
+      setStudent(studentData.data[0]);
+    }    
+  
+    // ----- Today's Time -----
+    let windowTime = 0;
+    let launcherTime = 0;
+    const notebookSummary: Record<string, { duration: number; latestTimestamp: number }> = {};
+    const minutesByActivebook: Record<string, number> = {};
+    const minutesByRegular: Record<string, number> = {};
+  
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+  
+    logs.forEach((log: any) => {
+      const { log_info, time_stamp } = log;
+      const ts = new Date(time_stamp);
+  
+      if (log_info.type === 'window' && ts >= todayStart && ts < tomorrowStart) {
+        if (log_info.tab === 'launcher') {
+          launcherTime += log_info.duration;
+        }
+        windowTime += log_info.duration;
+      }
+  
+      if (
+        log_info.type === 'notebook' &&
+        log_info.notebook_id &&
+        ts >= todayStart &&
+        ts < tomorrowStart
+      ) {
+        const name = log_info.name || log_info.notebook_id;
+        const type = (log.notebook_type || '').toLowerCase();
+        if (!name.includes('Launcher') && !name.includes('My Dashboard') && !name.includes('Console')) {
+          if (!notebookSummary[name]) {
+            notebookSummary[name] = { duration: 0, latestTimestamp: 0 };
+          }
+          notebookSummary[name].duration += log_info.duration;
+          const tsMs = new Date(time_stamp).getTime();
+          if (tsMs > notebookSummary[name].latestTimestamp) {
+            notebookSummary[name].latestTimestamp = tsMs;
+          }
+          if (type === 'activebook') {
+            minutesByActivebook[name] = (minutesByActivebook[name] || 0) + log_info.duration;
+          } else {
+            minutesByRegular[name] = (minutesByRegular[name] || 0) + log_info.duration;
+          }
+        }
+      }
+    });
+  
+    const totalLab = Math.max(0, windowTime - launcherTime);
+    setLabTime(totalLab);
+  
+    // Summary table
+    const summaryArray = Object.entries(notebookSummary)
+      .map(([notebookId, { duration, latestTimestamp }]) => ({
+        notebookId,
+        duration,
+        latestTimestamp
+      }))
+      .sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+    setSummaries(summaryArray);
+  
+    // Activebook + Regular data
+    setActivebookChartData(Object.entries(minutesByActivebook).map(([name, duration]) => ({
+      name,
+      minutes: parseFloat((duration / 60).toFixed(1))
+    })).filter(e => e.minutes > 0));
+    setRegularChartData(Object.entries(minutesByRegular).map(([name, duration]) => ({
+      name,
+      minutes: parseFloat((duration / 60).toFixed(1))
+    })).filter(e => e.minutes > 0));
+  
+    // Load goal target
+    const todayKey = `goal-${new Date().toLocaleDateString()}`;
+    const savedTarget = localStorage.getItem(todayKey);
+    if (savedTarget) {
+      setTargetMinutes(Number(savedTarget));
+      setIsGoalLocked(true);
+    }
+  
+    // ----- Charts: Consistency, Engagement -----
+    const today = new Date();
+    const dailyMap: { [date: string]: number } = {};
+    logs.forEach((log: any) => {
+      const { log_info, time_stamp } = log;
+      if (log_info.type === 'window') {
+        const date = new Date(time_stamp).toLocaleDateString();
+        dailyMap[date] = (dailyMap[date] || 0) + (log_info.duration || 0);
+      }
+    });
+  
+    const last7Days: number[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const key = d.toLocaleDateString();
+      const minutes = parseFloat(((dailyMap[key] || 0) / 60).toFixed(1));
+      last7Days.push(minutes);
+    }
+    setDailyActiveMinutes(last7Days);
+  
+    const last150Days: number[] = [];
+    const last150DaysData: { day: string; value: number }[] = [];
+    for (let i = 149; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const key = d.toLocaleDateString();
+      const minutes = Math.round((dailyMap[key] || 0) / 60);
+      last150Days.push(minutes);
+      last150DaysData.push({ day: key.slice(0, 5), value: minutes });
+    }
+  
+    const semesterDays = 150;
+    const expectedEffort = 60;
+    const maxBonus = 10;
+    const epsilon = 0.01;
+    const alpha = 1 - Math.pow(epsilon, 1 / semesterDays);
+    let prevScore = 0;
+    const smoothedScores = last150DaysData.map(({ day, value }) => {
+      const r = Math.max(0, Math.min(value / expectedEffort, 1));
+      const score = Math.max(0, Math.min((1 - alpha) * prevScore + alpha * r * maxBonus, maxBonus));
+      prevScore = score;
+      return { day, value: parseFloat(score.toFixed(2)) };
+    });
+  
+    setLongTermConsistency(smoothedScores);
+    setConsistencyScore(
+      smoothedScores.length > 0 ? smoothedScores[smoothedScores.length - 1].value : 0
+    );    
+  
+    // ----- Streak -----
+    let streak = 0;
+    for (let i = last150Days.length - 1; i >= 0; i--) {
+      if (last150Days[i] >= 10) streak++;
+      else break;
+    }
+    setConsistencyStreak([{ day: 'Current', value: streak }]);
+  };
 
   // For student profile
   useEffect(() => {
@@ -155,26 +304,26 @@ export const MyDashboard = () => {
       .catch(err => console.error('Failed to fetch student:', err));
   }, []);
 
-  // For last notebook
-  useEffect(() => {
-    async function loadLogs() {
-      const allLogs = await fetchLogsFromCodeBench();
-      const notebookLogs = allLogs
-        .filter((log: any) => log.log_info.type === 'notebook')
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.time_stamp).getTime() - new Date(a.time_stamp).getTime()
-        );
+  // // For last notebook
+  // useEffect(() => {
+  //   async function loadLogs() {
+  //     const allLogs = await fetchLogsFromCodeBench();
+  //     const notebookLogs = allLogs
+  //       .filter((log: any) => log.log_info.type === 'notebook')
+  //       .sort(
+  //         (a: any, b: any) =>
+  //           new Date(b.time_stamp).getTime() - new Date(a.time_stamp).getTime()
+  //       );
 
-      if (notebookLogs.length > 0) {
-        const recent = notebookLogs[0];
-        setLastNotebookPath(`/lab/tree/${recent.notebook_id}`);
-        const parts = recent.notebook_id.split('/');
-        setLastNotebookTitle(parts[parts.length - 1]);
-      }
-    }
-    loadLogs();
-  }, []);
+  //     if (notebookLogs.length > 0) {
+  //       const recent = notebookLogs[0];
+  //       setLastNotebookPath(`/lab/tree/${recent.notebook_id}`);
+  //       const parts = recent.notebook_id.split('/');
+  //       setLastNotebookTitle(parts[parts.length - 1]);
+  //     }
+  //   }
+  //   loadLogs();
+  // }, []);
 
   // For Goal Planner
   useEffect(() => {
@@ -289,7 +438,8 @@ export const MyDashboard = () => {
       console.log('Fetching logs from CodeBench server...');
       console.log(logs);
 
-      let totalLabTime = 0;
+      let windowTime = 0;
+      let launcherTime = 0;
       // Map: notebookId -> { duration, latestTimestamp }
       const notebookSummary: Record<
         string,
@@ -307,14 +457,17 @@ export const MyDashboard = () => {
         const { log_info, time_stamp } = log;
         const ts = new Date(time_stamp);
 
-        // Today's window time
+        // Today's window time (exclude launcher)
         if (
           log_info.type === 'window' &&
           ts >= todayStart &&
           ts < tomorrowStart
         ) {
-          totalLabTime += log_info.duration;
-        }
+          if (log_info.tab === 'launcher') {
+            launcherTime += log_info.duration;
+          }
+          windowTime += log_info.duration;
+        }        
 
         // Today's notebook time
         if (
@@ -352,7 +505,7 @@ export const MyDashboard = () => {
         }
       });
 
-      setLabTime(totalLabTime);
+      setLabTime(Math.max(0, windowTime - launcherTime));
 
       // Load saved target if exists
       const savedTarget = localStorage.getItem(todayKey);
@@ -393,6 +546,10 @@ export const MyDashboard = () => {
     }
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
 
   return (
@@ -770,7 +927,7 @@ export const MyDashboard = () => {
                     style={{
                       position: 'absolute',
                       top: '50%',
-                      left: '5.75em', // 拉近中線
+                      left: '5.3em', // Smaller = closer to center
                       transform: 'translate(-50%, -50%)',
                       textAlign: 'center'
                     }}
@@ -897,18 +1054,10 @@ export const MyDashboard = () => {
                       <div
                         style={{
                           fontSize: '1.1em',
-                          color: lastNotebookPath ? '#1a237e' : '#aaa',
-                          textDecoration: lastNotebookPath
-                            ? 'underline'
-                            : 'none',
-                          cursor: lastNotebookPath ? 'pointer' : 'default'
-                        }}
-                        onClick={() => {
-                          if (lastNotebookPath)
-                            window.open(lastNotebookPath, '_blank');
+                          color: '#1a237e'
                         }}
                       >
-                        {lastNotebookTitle || 'No notebook yet'}
+                        No notebook opened yet
                       </div>
                     </div>
                   </div>
@@ -1245,6 +1394,43 @@ export const MyDashboard = () => {
             </>
           )}
         </section>
+
+        {/* 🔄 Floating Refresh Button */}
+<button
+  onClick={() => {
+    console.log('🔁 Refreshing dashboard...');
+    fetchDashboardData();
+  }}
+  title="Refresh Dashboard"
+  style={{
+    position: 'fixed',
+    bottom: '2em',
+    right: '2em',
+    width: '60px',
+    height: '60px',
+    borderRadius: '50%',
+    border: 'none',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    fontSize: '1.5em',
+    cursor: 'pointer',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    transition: 'opacity 0.3s ease, transform 0.2s ease',
+    opacity: 0.8
+  }}
+  onMouseEnter={e => {
+    e.currentTarget.style.opacity = '1';
+    e.currentTarget.style.transform = 'scale(1.05)';
+  }}
+  onMouseLeave={e => {
+    e.currentTarget.style.opacity = '0.8';
+    e.currentTarget.style.transform = 'scale(1)';
+  }}
+>
+  🔄
+</button>
+
       </div>
     </>
   );
