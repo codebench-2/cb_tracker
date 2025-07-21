@@ -123,7 +123,7 @@ export const MyDashboard = () => {
   >([]);
   const [targetMinutes, setTargetMinutes] = useState(30);
   const [goalStatus, setGoalStatus] = useState('');
-  const [bonusPoints, setBonusPoints] = useState(0);
+  // const [bonusPoints, setBonusPoints] = useState(0);
   const [goalAwarded, setGoalAwarded] = useState(false);
   const todayKey = `goal-${new Date().toLocaleDateString()}`;
   const [isGoalLocked, setIsGoalLocked] = useState(
@@ -329,7 +329,7 @@ export const MyDashboard = () => {
   useEffect(() => {
     if (todayMinutes >= targetMinutes && !goalAwarded) {
       setGoalStatus('Goal achieved! 🎉');
-      setBonusPoints(prev => prev + 1);
+      // setBonusPoints(prev => prev + 1);
       setGoalAwarded(true);
     } else if (todayMinutes < targetMinutes) {
       setGoalStatus('Below goal 😭');
@@ -848,54 +848,71 @@ export const MyDashboard = () => {
                   </div>
                 </div>
 
-                {/* Bonus */}
+                {/* Bonus
                 <div style={{ fontWeight: 'bold', color: '#2a9d8f' }}>
                   Bonus:{' '}
                   <span style={{ fontSize: '1.5em', color: '#e76f5f1' }}>
                     +{bonusPoints}
                   </span>
-                </div>
+                </div> */}
               </div>
 
               {/* Status Bar */}
-              <div style={{ marginTop: '0.05em' }}>
-                <div
-                  style={{
-                    fontSize: '1.2em',
-                    fontWeight: 'bold',
-                    marginBottom: '0.3em',
-                    color: '#2a9d8f'
-                  }}
-                >
-                  <span>Status:</span>{' '}
-                  <span
-                    style={{
-                      color:
-                        labTime / 60 >= targetMinutes ? '#2e7d32' : '#e63946'
-                    }}
-                  >
-                    {goalStatus}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    background: '#eee',
-                    height: '20px',
-                    borderRadius: '10px',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${Math.min((labTime / 60 / targetMinutes) * 100, 100)}%`,
-                      backgroundColor:
-                        labTime / 60 >= targetMinutes ? '#43a047' : '#e63946',
-                      transition: 'width 0.5s ease'
-                    }}
-                  />
-                </div>
-              </div>
+<div style={{ marginTop: '0.05em' }}>
+  <div
+    style={{
+      fontSize: '1.2em',
+      fontWeight: 'bold',
+      marginBottom: '0.3em',
+      color: '#2a9d8f'
+    }}
+  >
+    <span>Status:</span>{' '}
+    <span
+      style={{
+        color: labTime / 60 >= targetMinutes ? '#2e7d32' : '#e63946'
+      }}
+    >
+      {goalStatus}
+    </span>
+  </div>
+
+  {/* Progress Bar */}
+  <div
+    style={{
+      background: '#eee',
+      height: '20px',
+      borderRadius: '10px',
+      overflow: 'hidden'
+    }}
+  >
+    {(() => {
+      const percent = (labTime / 60 / targetMinutes) * 100;
+      const clamped = Math.min(percent, 100);
+
+      let barColor = '#e63946'; // <50%
+      if (percent >= 70) {
+        barColor = '#a5d6a7'; // light green
+      } else if (percent >= 50) {
+        barColor = '#e76f51'; // orange
+      }
+      if (percent >= 100) {
+        barColor = '#2e7d32'; // green when achieved
+      }
+
+      return (
+        <div
+          style={{
+            height: '100%',
+            width: `${clamped}%`,
+            backgroundColor: barColor,
+            transition: 'width 0.5s ease'
+          }}
+        />
+      );
+    })()}
+  </div>
+</div>
             </Card>
 
             {/* League + Last Notebook */}
