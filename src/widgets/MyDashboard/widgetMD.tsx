@@ -1410,9 +1410,9 @@ export const MyDashboard = () => {
     height: '60px',
     borderRadius: '50%',
     border: 'none',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    fontSize: '1.5em',
+    backgroundColor: '#fff3f0',
+    color: '#f28b82',
+    fontSize: '2.5em',
     cursor: 'pointer',
     boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
     zIndex: 1000,
@@ -1428,7 +1428,7 @@ export const MyDashboard = () => {
     e.currentTarget.style.transform = 'scale(1)';
   }}
 >
-  🔄
+  ⟳
 </button>
 
       </div>
