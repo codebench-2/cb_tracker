@@ -559,6 +559,8 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
         // === Cell Timer Display ===
         const updateCellTimers = () => {
           panel.content.widgets.forEach((cell, idx) => {
+            if (!cell?.model?.id) return;
+            
             let timerNode = cell.node.querySelector(
               '.cell-timer'
             ) as HTMLDivElement;
