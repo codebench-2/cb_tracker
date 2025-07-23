@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { fetchLogsFromCodeBench } from '../../api/codebench';
 import { WorkSummaryChart } from './WorkSummaryChart';
 import { EngagementStreakChart } from './EngagementStreakChart';
@@ -11,9 +11,62 @@ import { MdBarChart } from 'react-icons/md';
 import { FaClipboardList, FaRegClock } from 'react-icons/fa';
 import { COURSE_ID } from '../../common/config';
 import { TbTargetArrow } from 'react-icons/tb';
-import { FaAward, FaTrophy } from 'react-icons/fa';
-import { GiDiamondTrophy } from 'react-icons/gi';
 import { GiBookCover } from 'react-icons/gi';
+import { FaLock as FaLockIcon, FaUnlock as FaUnlockIcon } from 'react-icons/fa';
+
+import iron from '../../common/images/badges/iron.png';
+import bronze from '../../common/images/badges/bronze.png';
+import silver from '../../common/images/badges/silver.png';
+import gold from '../../common/images/badges/gold.png';
+import platinum from '../../common/images/badges/platinum.png';
+import emerald from '../../common/images/badges/emerald.png';
+import diamond from '../../common/images/badges/diamond.png';
+import master from '../../common/images/badges/master.png';
+import grandmaster from '../../common/images/badges/grandmaster.png';
+import challenger from '../../common/images/badges/challenger.png';
+
+function LockIcon({ onUnlock }: { onUnlock: () => void }) {
+  const [isLocked, setIsLocked] = useState(true);
+  const [pressing, setPressing] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleDown = () => {
+    setPressing(true);
+    timeoutRef.current = setTimeout(() => {
+      setIsLocked(false);
+      onUnlock();
+    }, 2000); // 2 秒解鎖
+  };
+
+  const handleUp = () => {
+    setPressing(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  };
+
+  return (
+    <span
+      onMouseDown={handleDown}
+      onMouseUp={handleUp}
+      onMouseLeave={handleUp}
+      onTouchStart={handleDown}
+      onTouchEnd={handleUp}
+      style={{
+        marginLeft: '0.5em',
+        color: isLocked ? '#000000' : '#4caf50',
+        cursor: 'pointer',
+        fontSize: '1.2em',
+        transform: pressing ? 'scale(1.2)' : 'scale(1)',
+        transition: 'transform 0.2s'
+      }}
+      title={isLocked ? 'Hold to unlock' : 'Unlocked'}
+    >
+      {isLocked ? 
+        React.createElement(FaLockIcon as unknown as React.ComponentType<any>) : 
+        React.createElement(FaUnlockIcon as unknown as React.ComponentType<any>)
+      }
+    </span>
+  );
+}
 
 const iconStyle: React.CSSProperties = {
   animation: 'goalPulse 1.8s infinite ease-in-out',
@@ -32,66 +85,56 @@ const AnimatedBookIcon = styled.div<{ color?: string }>`
   animation: ${bookFlip} 2s infinite ease-in-out;
 `;
 
-function getBadge(streak: number): { icon: React.ReactNode; color: string } {
-  if (streak >= 75) {
-    // I - Diamond
-    return {
-      icon: React.createElement(
-        GiDiamondTrophy as unknown as React.ComponentType<any>
-      ),
-      color: '#00BFFF'
-    }; // Diamond Blue
-  }
-  if (streak >= 30) {
-    // II - Platinum
-    return {
-      icon: React.createElement(
-        FaTrophy as unknown as React.ComponentType<any>
-      ),
-      color: '#E5E4E2'
-    }; // Platinum
-  }
-  if (streak >= 7) {
-    // III - Gold
-    return {
-      icon: React.createElement(
-        FaTrophy as unknown as React.ComponentType<any>
-      ),
-      color: '#FFD700'
-    }; // Gold
-  }
-  if (streak >= 2) {
-    // IV - Silver
-    return {
-      icon: React.createElement(FaAward as unknown as React.ComponentType<any>),
-      color: '#C0C0C0'
-    }; // Silver
-  }
-  // V - Bronze
+const badgeMap: { [tier: string]: string } = {
+  iron,
+  bronze,
+  silver,
+  gold,
+  platinum,
+  emerald,
+  diamond,
+  master,
+  grandmaster,
+  challenger
+};
+
+function getBadge(streak: number): { icon: React.ReactNode; level: string } {
+  let tier = 'iron';
+
+  if (streak >= 100) tier = 'challenger';
+  else if (streak >= 90) tier = 'grandmaster';
+  else if (streak >= 70) tier = 'master';
+  else if (streak >= 50) tier = 'diamond';
+  else if (streak >= 30) tier = 'emerald';
+  else if (streak >= 14) tier = 'platinum';
+  else if (streak >= 7) tier = 'gold';
+  else if (streak >= 5) tier = 'silver';
+  else if (streak >= 2) tier = 'bronze';
+
   return {
-    icon: React.createElement(FaAward as unknown as React.ComponentType<any>),
-    color: '#CD7F32'
-  }; // Bronze
+    icon: (
+      <img
+        src={badgeMap[tier]}
+        alt={`${tier} badge`}
+        style={{ width: '80px', height: '80px' }}
+      />
+    ),
+    level: tier
+  };
 }
 
 function getLevelNumber(streak: number): string {
-  if (streak >= 75) return 'I'; // Diamond
-  if (streak >= 30) return 'II'; // Platinum
-  if (streak >= 7) return 'III'; // Gold
-  if (streak >= 2) return 'IV'; // Silver
-  return 'V'; // Bronze
+  if (streak >= 100) return 'I';         // Challenger
+  else if (streak >= 90) return 'II';    // Grandmaster
+  else if (streak >= 70) return 'III';   // Master
+  else if (streak >= 50) return 'IV';    // Diamond
+  else if (streak >= 30) return 'V';     // Emerald
+  else if (streak >= 14) return 'VI';    // Platinum
+  else if (streak >= 7) return 'VII';    // Gold
+  else if (streak >= 5) return 'VIII';   // Silver
+  else if (streak >= 2) return 'IX';     // Bronze
+  return 'X';                            // Iron
 }
-
-const badgePulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.9; }
-`;
-
-const BadgeIcon = styled.div<{ color: string }>`
-  color: ${p => p.color};
-  animation: ${badgePulse} 1.5s infinite;
-  font-size: 3em;
-`;
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -848,15 +891,7 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                         ✔
                       </button>
                     ) : (
-                      <span
-                        style={{
-                          marginLeft: '0.5em',
-                          color: '#888',
-                          fontSize: '0.9em'
-                        }}
-                      >
-                        (Locked for today)
-                      </span>
+                      <LockIcon onUnlock={() => setIsGoalLocked(false)} />
                     )}
                   </div>
                 </div>
@@ -964,20 +999,16 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                       textAlign: 'center'
                     }}
                   >
-                    <BadgeIcon
-                      color={getBadge(consistencyStreak[0]?.value || 0).color}
-                      // color={getBadge(150).color}
-                      style={{ fontSize: '4em' }}
-                    >
-                      {getBadge(consistencyStreak[0]?.value || 0).icon}
-                      {/* {getBadge(150).icon} */}
-                    </BadgeIcon>
-                    <div
+                    {/* badge image */}
+  <div>
+    {getBadge(consistencyStreak[0]?.value || 0).icon}
+  </div>
+                     {/* level name */}
+                     <div
                       style={{
                         fontSize: '1.3em',
                         fontWeight: 'bold',
-                        color: getBadge(consistencyStreak[0]?.value || 0).color,
-                        // color: getBadge(150).color,
+                        color: '#000',
                         marginTop: '0.1em'
                       }}
                     >
@@ -1004,7 +1035,7 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                           color: 'white'
                         }}
                       >
-                        Consistency Score
+                        Rank
                       </div>
                       <div
                         style={{
@@ -1013,20 +1044,9 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                           color: 'white'
                         }}
                       >
-                        {consistencyScore !== null
-                          ? consistencyScore.toFixed(1)
-                          : '--'}
-                        <span
-                          style={{
-                            fontSize: '0.5em',
-                            color: 'white',
-                            marginLeft: '0.1em'
-                          }}
-                        >
-                          /10
-                        </span>
-                      </div>
+                        Coming soon...
                     </div>
+                  </div>
                   </div>
                 </Card>
               </div>
@@ -1116,7 +1136,8 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
               borderRadius: '20px',
               border: '1px solid #FFDEDE',
               boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
+              position: 'relative'
             }}
           >
             <div
@@ -1144,9 +1165,19 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                   margin: 0
                 }}
               >
-                Consistency Score (past 120 days)
+                Consistency Score ({consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
+      <span
+        style={{
+          fontSize: '0.7em',
+          color: '#999',
+          marginLeft: '0.2em'
+        }}
+      >
+        /10
+      </span>)
               </h3>
             </div>
+
             <ConsistencyScoreChart scores={longTermConsistency} />
           </Card>
         </section>
@@ -1312,11 +1343,11 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
               <h2
                 style={{
                   fontSize: '1.5em',
-                  fontWeight: 700,
+                  fontWeight: 550,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5em',
-                  color: '#1f2937',
+                  color: '#000000',
                   marginBottom: '1em'
                 }}
               >
@@ -1351,7 +1382,7 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                         {summary.notebookId}
                       </span>{' '}
                       for{' '}
-                      <span style={{ fontWeight: 600, color: '#f97316' }}>
+                      <span style={{ fontWeight: 600, color: '#FF8551' }}>
                         {(summary.duration / 60).toFixed(1)} minutes
                       </span>{' '}
                       today.
@@ -1398,20 +1429,20 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                 style={{
                   fontSize: '1.3em',
                   fontWeight: 700,
-                  color: '#10b981',
+                  color: '#FF8551',
                   marginTop: '1em'
                 }}
               >
                 Learning streak unlocked! 🔥
               </p>
-              <p style={{ fontSize: '1.1em', color: '#4b5563' }}>
+              <p style={{ fontSize: '1.1em', color: '#4E9FA2' }}>
                 You're crushing it — keep going! 💪
               </p>
             </>
           ) : (
             <>
               <img
-                src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZHZoejRuZWZuc2EzbjhjbXRtcnIwcTZpMmU5cjc1OGZqdWJxbG5paSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/cr9vIO7NsP5cY/giphy.gif"
+                src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZmRjb2QzN29iZ2tvaGI0bWx6NGZqMmt3MGNkYnpxdG13ZGIxOHRyYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/hPPx8yk3Bmqys/giphy.gif"
                 alt="Work harder meme"
                 style={{
                   maxWidth: '300px',
@@ -1423,13 +1454,13 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                 style={{
                   fontSize: '1.3em',
                   fontWeight: 700,
-                  color: '#f59e0b',
+                  color: '#4E9FA2',
                   marginTop: '1em'
                 }}
               >
                 Just getting started... 🐢
               </p>
-              <p style={{ fontSize: '1.1em', color: '#6b7280' }}>
+              <p style={{ fontSize: '1.1em', color: '#000000' }}>
                 Try to hit at least 10 minutes today!
               </p>
             </>
@@ -1451,7 +1482,7 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
     height: '60px',
     borderRadius: '50%',
     border: 'none',
-    backgroundColor: '#fff3f0',
+    backgroundColor: '#FFDEDE',
     color: '#f28b82',
     fontSize: '2.5em',
     cursor: 'pointer',
