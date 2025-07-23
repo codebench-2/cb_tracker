@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { fetchLogsFromCodeBench } from '../../api/codebench';
 import { WorkSummaryChart } from './WorkSummaryChart';
 import { EngagementStreakChart } from './EngagementStreakChart';
@@ -11,13 +11,66 @@ import { MdBarChart } from 'react-icons/md';
 import { FaClipboardList, FaRegClock } from 'react-icons/fa';
 import { COURSE_ID } from '../../common/config';
 import { TbTargetArrow } from 'react-icons/tb';
-import { FaAward, FaTrophy } from 'react-icons/fa';
-import { GiDiamondTrophy } from 'react-icons/gi';
 import { GiBookCover } from 'react-icons/gi';
+import { FaLock as FaLockIcon, FaUnlock as FaUnlockIcon } from 'react-icons/fa';
+
+import iron from '../../common/images/badges/iron.png';
+import bronze from '../../common/images/badges/bronze.png';
+import silver from '../../common/images/badges/silver.png';
+import gold from '../../common/images/badges/gold.png';
+import platinum from '../../common/images/badges/platinum.png';
+import emerald from '../../common/images/badges/emerald.png';
+import diamond from '../../common/images/badges/diamond.png';
+import master from '../../common/images/badges/master.png';
+import grandmaster from '../../common/images/badges/grandmaster.png';
+import challenger from '../../common/images/badges/challenger.png';
+
+function LockIcon({ onUnlock }: { onUnlock: () => void }) {
+  const [isLocked, setIsLocked] = useState(true);
+  const [pressing, setPressing] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleDown = () => {
+    setPressing(true);
+    timeoutRef.current = setTimeout(() => {
+      setIsLocked(false);
+      onUnlock();
+    }, 2000); // 2 秒解鎖
+  };
+
+  const handleUp = () => {
+    setPressing(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  };
+
+  return (
+    <span
+      onMouseDown={handleDown}
+      onMouseUp={handleUp}
+      onMouseLeave={handleUp}
+      onTouchStart={handleDown}
+      onTouchEnd={handleUp}
+      style={{
+        marginLeft: '0.5em',
+        color: isLocked ? '#000000' : '#4caf50',
+        cursor: 'pointer',
+        fontSize: '1.2em',
+        transform: pressing ? 'scale(1.2)' : 'scale(1)',
+        transition: 'transform 0.2s'
+      }}
+      title={isLocked ? 'Hold to unlock' : 'Unlocked'}
+    >
+      {isLocked ? 
+        React.createElement(FaLockIcon as unknown as React.ComponentType<any>) : 
+        React.createElement(FaUnlockIcon as unknown as React.ComponentType<any>)
+      }
+    </span>
+  );
+}
 
 const iconStyle: React.CSSProperties = {
   animation: 'goalPulse 1.8s infinite ease-in-out',
-  color: '#e76f51'
+  color: '#e63946'
 };
 
 const bookFlip = keyframes`
@@ -28,70 +81,60 @@ const bookFlip = keyframes`
 
 const AnimatedBookIcon = styled.div<{ color?: string }>`
   font-size: 4em;
-  color: ${({ color }) => color || '#1a237e'};
+  color: ${({ color }) => color || '#4E9FA2'};
   animation: ${bookFlip} 2s infinite ease-in-out;
 `;
 
-function getBadge(streak: number): { icon: React.ReactNode; color: string } {
-  if (streak >= 150) {
-    // I - Diamond
-    return {
-      icon: React.createElement(
-        GiDiamondTrophy as unknown as React.ComponentType<any>
-      ),
-      color: '#00BFFF'
-    }; // Diamond Blue
-  }
-  if (streak >= 60) {
-    // II - Platinum
-    return {
-      icon: React.createElement(
-        FaTrophy as unknown as React.ComponentType<any>
-      ),
-      color: '#E5E4E2'
-    }; // Platinum
-  }
-  if (streak >= 30) {
-    // III - Gold
-    return {
-      icon: React.createElement(
-        FaTrophy as unknown as React.ComponentType<any>
-      ),
-      color: '#FFD700'
-    }; // Gold
-  }
-  if (streak >= 15) {
-    // IV - Silver
-    return {
-      icon: React.createElement(FaAward as unknown as React.ComponentType<any>),
-      color: '#C0C0C0'
-    }; // Silver
-  }
-  // V - Bronze
+const badgeMap: { [tier: string]: string } = {
+  iron,
+  bronze,
+  silver,
+  gold,
+  platinum,
+  emerald,
+  diamond,
+  master,
+  grandmaster,
+  challenger
+};
+
+function getBadge(streak: number): { icon: React.ReactNode; level: string } {
+  let tier = 'iron';
+
+  if (streak >= 100) tier = 'challenger';
+  else if (streak >= 90) tier = 'grandmaster';
+  else if (streak >= 70) tier = 'master';
+  else if (streak >= 50) tier = 'diamond';
+  else if (streak >= 30) tier = 'emerald';
+  else if (streak >= 14) tier = 'platinum';
+  else if (streak >= 7) tier = 'gold';
+  else if (streak >= 5) tier = 'silver';
+  else if (streak >= 2) tier = 'bronze';
+
   return {
-    icon: React.createElement(FaAward as unknown as React.ComponentType<any>),
-    color: '#CD7F32'
-  }; // Bronze
+    icon: (
+      <img
+        src={badgeMap[tier]}
+        alt={`${tier} badge`}
+        style={{ width: '80px', height: '80px' }}
+      />
+    ),
+    level: tier
+  };
 }
 
 function getLevelNumber(streak: number): string {
-  if (streak >= 150) return 'I'; // Diamond
-  if (streak >= 60) return 'II'; // Platinum
-  if (streak >= 30) return 'III'; // Gold
-  if (streak >= 15) return 'IV'; // Silver
-  return 'V'; // Bronze
+  if (streak >= 100) return 'I';         // Challenger
+  else if (streak >= 90) return 'II';    // Grandmaster
+  else if (streak >= 70) return 'III';   // Master
+  else if (streak >= 50) return 'IV';    // Diamond
+  else if (streak >= 30) return 'V';     // Emerald
+  else if (streak >= 14) return 'VI';    // Platinum
+  else if (streak >= 7) return 'VII';    // Gold
+  else if (streak >= 5) return 'VIII';   // Silver
+  else if (streak >= 2) return 'IX';     // Bronze
+  return 'X';                            // Iron
 }
-
-const badgePulse = keyframes`
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.9; }
-`;
-
-const BadgeIcon = styled.div<{ color: string }>`
-  color: ${p => p.color};
-  animation: ${badgePulse} 1.5s infinite;
-  font-size: 3em;
-`;
 
 const pulse = keyframes`
   0%   { transform: scale(1);   opacity: 1; }
@@ -100,7 +143,7 @@ const pulse = keyframes`
 `;
 
 const FireIcon = styled(FaFireAlt as unknown as React.ComponentType<any>)`
-  color: #e76f51;
+  color: #FF8551;
   animation: ${pulse} 1.2s infinite;
   font-size: 1.8em;
 `;
@@ -254,24 +297,24 @@ export const MyDashboard = () => {
     }
     setDailyActiveMinutes(last7Days);
   
-    const last150Days: number[] = [];
-    const last150DaysData: { day: string; value: number }[] = [];
-    for (let i = 149; i >= 0; i--) {
+    const last120Days: number[] = [];
+    const last120DaysData: { day: string; value: number }[] = [];
+    for (let i = 119; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
       const key = d.toLocaleDateString();
       const minutes = Math.round((dailyMap[key] || 0) / 60);
-      last150Days.push(minutes);
-      last150DaysData.push({ day: key.slice(0, 5), value: minutes });
+      last120Days.push(minutes);
+      last120DaysData.push({ day: key.slice(0, 5), value: minutes });
     }
   
-    const semesterDays = 150;
+    const semesterDays = 120;
     const expectedEffort = 60;
     const maxBonus = 10;
     const epsilon = 0.01;
     const alpha = 1 - Math.pow(epsilon, 1 / semesterDays);
     let prevScore = 0;
-    const smoothedScores = last150DaysData.map(({ day, value }) => {
+    const smoothedScores = last120DaysData.map(({ day, value }) => {
       const r = Math.max(0, Math.min(value / expectedEffort, 1));
       const score = Math.max(0, Math.min((1 - alpha) * prevScore + alpha * r * maxBonus, maxBonus));
       prevScore = score;
@@ -284,12 +327,18 @@ export const MyDashboard = () => {
     );    
   
     // ----- Streak -----
-    let streak = 0;
-    for (let i = last150Days.length - 1; i >= 0; i--) {
-      if (last150Days[i] >= 10) streak++;
-      else break;
-    }
-    setConsistencyStreak([{ day: 'Current', value: streak }]);
+    let historicalStreak = 0;
+for (let i = last120Days.length - 2; i >= 0; i--) {
+  if (last120Days[i] >= 10) {
+    historicalStreak += 1;
+  } else {
+    break;
+  }
+}
+const todayMinutes = last120Days[last120Days.length - 1];
+const todayContribution = todayMinutes >= 10 ? 1 : 0;
+const streak = historicalStreak + todayContribution;
+setConsistencyStreak([{ day: 'Current', value: streak }]);
   };
 
   // For student profile
@@ -327,15 +376,22 @@ export const MyDashboard = () => {
 
   // For Goal Planner
   useEffect(() => {
-    if (todayMinutes >= targetMinutes && !goalAwarded) {
+    const percent = (todayMinutes / targetMinutes) * 100;
+  
+    if (percent >= 100 && !goalAwarded) {
       setGoalStatus('Goal achieved! 🎉');
-      // setBonusPoints(prev => prev + 1);
       setGoalAwarded(true);
-    } else if (todayMinutes < targetMinutes) {
-      setGoalStatus('Below goal 😭');
+    } else if (percent >= 70) {
+      setGoalStatus('Almost there 💪');
+      setGoalAwarded(false);
+    } else if (percent >= 50) {
+      setGoalStatus('Halfway there ✨');
+      setGoalAwarded(false);
+    } else {
+      setGoalStatus('Just started 🚀');
       setGoalAwarded(false);
     }
-  }, [todayMinutes, targetMinutes, goalAwarded]);
+  }, [todayMinutes, targetMinutes, goalAwarded]);  
 
   // For streaks & engagement chart
   useEffect(() => {
@@ -370,21 +426,21 @@ export const MyDashboard = () => {
       }
       setDailyActiveMinutes(last7Days);
 
-      // Get last 150 days
-      const last150Days: number[] = [];
-      const last150DaysData: { day: string; value: number }[] = [];
+      // Get last 120 days
+      const last120Days: number[] = [];
+      const last120DaysData: { day: string; value: number }[] = [];
 
-      for (let i = 149; i >= 0; i--) {
+      for (let i = 119; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
         const key = d.toLocaleDateString();
         const minutes = Math.round((dailyMap[key] || 0) / 60);
-        last150Days.push(minutes);
-        last150DaysData.push({ day: key.slice(0, 5), value: minutes });
+        last120Days.push(minutes);
+        last120DaysData.push({ day: key.slice(0, 5), value: minutes });
       }
 
-      // Consistency score for 150 days
-      const semesterDays = 150;
+      // Consistency score for 120 days
+      const semesterDays = 120;
       const expectedEffort = 60;
       const maxBonus = 10;
       const epsilon = 0.01;
@@ -394,13 +450,13 @@ export const MyDashboard = () => {
       const smoothedScores: { day: string; value: number }[] = [];
       let prevScore = 0;
 
-      for (let i = 0; i < last150DaysData.length; i++) {
-        const minutes = last150DaysData[i].value;
+      for (let i = 0; i < last120DaysData.length; i++) {
+        const minutes = last120DaysData[i].value;
         const r = Math.max(0, Math.min(minutes / expectedEffort, rMax));
         let score = (1 - alpha) * prevScore + alpha * r * maxBonus;
         score = Math.max(0, Math.min(score, maxBonus)); // clamp
         smoothedScores.push({
-          day: last150DaysData[i].day,
+          day: last120DaysData[i].day,
           value: parseFloat(score.toFixed(2))
         });
         prevScore = score;
@@ -409,16 +465,16 @@ export const MyDashboard = () => {
       setLongTermConsistency(smoothedScores); // For chart
       setConsistencyScore(smoothedScores[smoothedScores.length - 1].value); // Current value
 
-      // Learning streak (150 days)
+      // Learning streak (120 days)
       let historicalStreak = 0;
-      for (let i = last150Days.length - 2; i >= 0; i--) {
-        if (last150Days[i] >= 10) {
+      for (let i = last120Days.length - 2; i >= 0; i--) {
+        if (last120Days[i] >= 10) {
           historicalStreak += 1;
         } else {
           break;
         }
       }
-      const todayMinutes = last150Days[last150Days.length - 1];
+      const todayMinutes = last120Days[last120Days.length - 1];
       const todayContribution = todayMinutes >= 10 ? 1 : 0;
       const streak = historicalStreak + todayContribution;
       setConsistencyStreak([{ day: 'Current', value: streak }]);
@@ -583,7 +639,7 @@ export const MyDashboard = () => {
       />
       <div
         style={{
-          backgroundColor: '#fff3f0',
+          backgroundColor: '#FAF0E4',
           position: 'relative',
           padding: '1.5em',
           fontFamily: 'sans-serif',
@@ -667,13 +723,13 @@ export const MyDashboard = () => {
                   }}
                 >
                   <FireIcon />
-                  <span style={{ fontSize: '1em' }}>Learning Streak</span>
+                  <span style={{ fontWeight: 500, fontSize: '1em', color: '#000000' }}>Learning Streak</span>
                 </div>
                 <div
                   style={{
                     fontSize: '2em',
                     fontWeight: 'bold',
-                    color: '#e76f51'
+                    color: '#FF8551'
                   }}
                 >
                   {consistencyStreak[0]?.value ?? 0} days
@@ -697,19 +753,19 @@ export const MyDashboard = () => {
                     FaRegClock as unknown as React.ComponentType<any>,
                     {
                       style: {
-                        color: '#14b8a6',
+                        color: '#4E9FA2',
                         fontSize: '1.5em',
                         animation: 'spin 2s linear infinite'
                       }
                     }
                   )}
-                  <span style={{ fontSize: '1em' }}>Today's Study</span>
+                  <span style={{ fontWeight: 500, fontSize: '1em', color: '#000000' }}>Today's Study</span>
                 </div>
                 <div
                   style={{
                     fontSize: '2em',
                     fontWeight: 'bold',
-                    color: '#2a9d8f'
+                    color: '#4E9FA2'
                   }}
                 >
                   {labTime / 60 >= 60
@@ -735,8 +791,8 @@ export const MyDashboard = () => {
               style={{
                 padding: '2.5em 2em',
                 borderRadius: '20px',
-                backgroundColor: '#fffaf0',
-                border: '3px solid #ffcb69',
+                backgroundColor: 'white',
+                border: '3px solid #e63946',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -748,7 +804,7 @@ export const MyDashboard = () => {
                 style={{
                   fontSize: '2em',
                   fontWeight: 'bold',
-                  color: '#e76f51',
+                  color: '#e63946',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -784,8 +840,8 @@ export const MyDashboard = () => {
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <span
                       style={{
-                        fontWeight: 'bold',
-                        color: '#2a9d8f',
+                        fontWeight: 600,
+                        color: '#000000',
                         marginRight: '0.5em'
                       }}
                     >
@@ -809,7 +865,7 @@ export const MyDashboard = () => {
                         margin: '0 0.5em'
                       }}
                     />
-                    <span style={{ color: '#2a9d8f', marginRight: '0.3em' }}>
+                    <span style={{ fontWeight: 600, color: '#000000', marginRight: '0.3em' }}>
                       mins
                     </span>
                     {!isGoalLocked ? (
@@ -825,8 +881,8 @@ export const MyDashboard = () => {
                         style={{
                           padding: '0.2em 0.6em',
                           fontSize: '0.9em',
-                          backgroundColor: '#2a9d8f',
-                          color: 'white',
+                          backgroundColor: 'white',
+                          color: '#000000',
                           border: 'none',
                           borderRadius: '5px',
                           cursor: 'pointer'
@@ -835,15 +891,7 @@ export const MyDashboard = () => {
                         ✔
                       </button>
                     ) : (
-                      <span
-                        style={{
-                          marginLeft: '0.5em',
-                          color: '#888',
-                          fontSize: '0.9em'
-                        }}
-                      >
-                        (Locked for today)
-                      </span>
+                      <LockIcon onUnlock={() => setIsGoalLocked(false)} />
                     )}
                   </div>
                 </div>
@@ -858,61 +906,63 @@ export const MyDashboard = () => {
               </div>
 
               {/* Status Bar */}
-<div style={{ marginTop: '0.05em' }}>
-  <div
-    style={{
-      fontSize: '1.2em',
-      fontWeight: 'bold',
-      marginBottom: '0.3em',
-      color: '#2a9d8f'
-    }}
-  >
-    <span>Status:</span>{' '}
-    <span
-      style={{
-        color: labTime / 60 >= targetMinutes ? '#2e7d32' : '#e63946'
-      }}
-    >
-      {goalStatus}
-    </span>
-  </div>
+{(() => {
+  const percent = (labTime / 60 / targetMinutes) * 100;
+  const clamped = Math.min(percent, 100);
 
-  {/* Progress Bar */}
-  <div
-    style={{
-      background: '#eee',
-      height: '20px',
-      borderRadius: '10px',
-      overflow: 'hidden'
-    }}
-  >
-    {(() => {
-      const percent = (labTime / 60 / targetMinutes) * 100;
-      const clamped = Math.min(percent, 100);
+  let barColor = '#e63946'; // <50%
+  if (percent >= 70) {
+    barColor = '#9BCDD2';
+  } else if (percent >= 50) {
+    barColor = '#FF8551';
+  }
+  if (percent >= 100) {
+    barColor = '#4E9FA2';
+  }
 
-      let barColor = '#e63946'; // <50%
-      if (percent >= 70) {
-        barColor = '#a5d6a7'; // light green
-      } else if (percent >= 50) {
-        barColor = '#e76f51'; // orange
-      }
-      if (percent >= 100) {
-        barColor = '#2e7d32'; // green when achieved
-      }
+  return (
+    <div style={{ marginTop: '0.05em' }}>
+      <div
+        style={{
+          fontSize: '1.2em',
+          fontWeight: 600,
+          marginBottom: '0.3em',
+          color: '#000000'
+        }}
+      >
+        <span>Status:</span>{' '}
+        <span
+          style={{
+            fontWeight: 600,
+            color: barColor
+          }}
+        >
+          {goalStatus}
+        </span>
+      </div>
 
-      return (
+      {/* Progress Bar */}
+      <div
+        style={{
+          background: '#eee',
+          height: '20px',
+          borderRadius: '10px',
+          overflow: 'hidden'
+        }}
+      >
         <div
           style={{
-            height: '100%',
             width: `${clamped}%`,
-            backgroundColor: barColor,
-            transition: 'width 0.5s ease'
+            height: '100%',
+            background: barColor,
+            transition: 'width 0.3s ease'
           }}
-        />
-      );
-    })()}
-  </div>
-</div>
+        ></div>
+      </div>
+    </div>
+  );
+})()}
+
             </Card>
 
             {/* League + Last Notebook */}
@@ -933,8 +983,8 @@ export const MyDashboard = () => {
                     height: '110px',
                     padding: '0.8em 1em',
                     borderRadius: '16px',
-                    backgroundColor: '#f3fff5',
-                    border: '2px solid #81c784',
+                    backgroundColor: '#FF8551',
+                    border: '2px solid #FF8551',
                     display: 'flex',
                     alignItems: 'center'
                   }}
@@ -949,20 +999,16 @@ export const MyDashboard = () => {
                       textAlign: 'center'
                     }}
                   >
-                    <BadgeIcon
-                      color={getBadge(consistencyStreak[0]?.value || 0).color}
-                      // color={getBadge(150).color}
-                      style={{ fontSize: '4.8em' }}
-                    >
-                      {getBadge(consistencyStreak[0]?.value || 0).icon}
-                      {/* {getBadge(150).icon} */}
-                    </BadgeIcon>
-                    <div
+                    {/* badge image */}
+  <div>
+    {getBadge(consistencyStreak[0]?.value || 0).icon}
+  </div>
+                     {/* level name */}
+                     <div
                       style={{
                         fontSize: '1.3em',
                         fontWeight: 'bold',
-                        color: getBadge(consistencyStreak[0]?.value || 0).color,
-                        // color: getBadge(150).color,
+                        color: '#000',
                         marginTop: '0.1em'
                       }}
                     >
@@ -986,32 +1032,21 @@ export const MyDashboard = () => {
                         style={{
                           fontSize: '1.7em',
                           fontWeight: 600,
-                          color: '#2e7d32'
+                          color: 'white'
                         }}
                       >
-                        Consistency Score
+                        Rank
                       </div>
                       <div
                         style={{
                           fontSize: '3em',
                           fontWeight: 'bold',
-                          color: '#43a047'
+                          color: 'white'
                         }}
                       >
-                        {consistencyScore !== null
-                          ? consistencyScore.toFixed(1)
-                          : '--'}
-                        <span
-                          style={{
-                            fontSize: '0.5em',
-                            color: '#81c784',
-                            marginLeft: '0.1em'
-                          }}
-                        >
-                          /10
-                        </span>
-                      </div>
+                        Coming soon...
                     </div>
+                  </div>
                   </div>
                 </Card>
               </div>
@@ -1024,8 +1059,8 @@ export const MyDashboard = () => {
                     height: '110px',
                     padding: '0.8em 1em',
                     borderRadius: '16px',
-                    backgroundColor: '#f3f6ff',
-                    border: '2px solid #90caf9',
+                    backgroundColor: '#9BCDD2',
+                    border: '2px solid #9BCDD2',
                     display: 'flex',
                     alignItems: 'center'
                   }}
@@ -1059,7 +1094,7 @@ export const MyDashboard = () => {
                         style={{
                           fontSize: '1.7em',
                           fontWeight: 600,
-                          color: '#1a237e'
+                          color: 'white'
                         }}
                       >
                         Last Opened Notebook
@@ -1071,7 +1106,7 @@ export const MyDashboard = () => {
                       <div
                         style={{
                           fontSize: '1.1em',
-                          color: '#1a237e'
+                          color: 'white'
                         }}
                       >
                         No notebook opened yet
@@ -1099,9 +1134,10 @@ export const MyDashboard = () => {
               flex: 1,
               padding: '1.5em 2em',
               borderRadius: '20px',
-              border: '1px solid #f4a261',
+              border: '1px solid #FFDEDE',
               boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
+              position: 'relative'
             }}
           >
             <div
@@ -1115,7 +1151,7 @@ export const MyDashboard = () => {
                 FaChartLine as unknown as React.ComponentType<any>,
                 {
                   style: {
-                    color: '#e76f51',
+                    color: '#FF8551',
                     fontSize: '1.5em',
                     marginRight: '0.5em'
                   }
@@ -1124,14 +1160,24 @@ export const MyDashboard = () => {
               <h3
                 style={{
                   fontSize: '1.3em',
-                  fontWeight: 600,
-                  color: '#264653',
+                  fontWeight: 550,
+                  color: '#000000',
                   margin: 0
                 }}
               >
-                Consistency Score (past 150 days)
+                Consistency Score ({consistencyScore !== null ? consistencyScore.toFixed(1) : '--'}
+      <span
+        style={{
+          fontSize: '0.7em',
+          color: '#999',
+          marginLeft: '0.2em'
+        }}
+      >
+        /10
+      </span>)
               </h3>
             </div>
+
             <ConsistencyScoreChart scores={longTermConsistency} />
           </Card>
         </section>
@@ -1143,7 +1189,7 @@ export const MyDashboard = () => {
               flex: 1,
               padding: '1.5em 2em',
               borderRadius: '20px',
-              border: '1px solid #f4a261',
+              border: '1px solid #FFDEDE',
               boxShadow: '0 4px 10px rgba(0, 0, 0, 0.06)',
               backgroundColor: 'white',
               marginTop: '1em'
@@ -1158,13 +1204,13 @@ export const MyDashboard = () => {
             >
               {React.createElement(
                 FaChartLine as unknown as React.ComponentType<any>,
-                { size: 22, style: { color: '#2a9d8f', marginRight: '0.5em' } }
+                { size: 22, style: { color: '#4E9FA2', marginRight: '0.5em' } }
               )}
               <h3
                 style={{
                   fontSize: '1.3em',
-                  fontWeight: 600,
-                  color: '#264653',
+                  fontWeight: 550,
+                  color: '#000000',
                   margin: '0.5em'
                 }}
               >
@@ -1192,15 +1238,15 @@ export const MyDashboard = () => {
                 flex: '1 1 45%',
                 padding: '1.5em 2em',
                 borderRadius: '20px',
-                border: '2px solid #f4a261',
+                border: '2px solid #FFDEDE',
                 boxShadow: '4px 4px 12px rgba(0,0,0,0.08)',
                 background: 'white'
               }}
             >
               <h2
                 style={{
-                  color: '#264653',
-                  fontWeight: 600,
+                  color: '#000000',
+                  fontWeight: 550,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5em'
@@ -1208,7 +1254,7 @@ export const MyDashboard = () => {
               >
                 {React.createElement(
                   MdBarChart as unknown as React.ComponentType<any>,
-                  { style: { color: '#e76f51' } }
+                  { style: { color: '#FF8551' } }
                 )}
                 Time Distribution for Activebook
               </h2>
@@ -1229,7 +1275,7 @@ export const MyDashboard = () => {
                 min
               </p>
 
-              <WorkSummaryChart data={activebookChartData as any} />
+              <WorkSummaryChart data={activebookChartData as any} barColor="#FF8551" />
             </Card>
           )}
 
@@ -1239,15 +1285,16 @@ export const MyDashboard = () => {
                 flex: '1 1 45%',
                 padding: '1.5em 2em',
                 borderRadius: '20px',
-                border: '2px solid #f4a261',
+                border: '2px solid #FFDEDE',
                 boxShadow: '4px 4px 12px rgba(0,0,0,0.08)',
                 background: 'white'
               }}
             >
+              
               <h2
                 style={{
-                  color: '#264653',
-                  fontWeight: 600,
+                  color: '#000000',
+                  fontWeight: 550,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5em'
@@ -1255,7 +1302,7 @@ export const MyDashboard = () => {
               >
                 {React.createElement(
                   MdBarChart as unknown as React.ComponentType<any>,
-                  { style: { color: '#2a9d8f' } }
+                  { style: { color: '#4E9FA2' } }
                 )}
                 Time Distribution for Assignments and Others
               </h2>
@@ -1276,29 +1323,37 @@ export const MyDashboard = () => {
                 min
               </p>
 
-              <WorkSummaryChart data={regularChartData as any} />
+              <WorkSummaryChart data={regularChartData as any} barColor="#4E9FA2" />
             </Card>
           )}
         </section>
 
         {/* Summary of Work Today */}
         <section style={{ marginTop: '1em' }}>
-          <Card>
+          <Card
+            style={{
+              padding: '1.5em 2em',
+              borderRadius: '20px',
+              border: '2px solid #FFDEDE',
+              boxShadow: '4px 4px 12px rgba(0,0,0,0.08)',
+              background: 'white'
+            }}
+          >
             <section>
               <h2
                 style={{
                   fontSize: '1.5em',
-                  fontWeight: 700,
+                  fontWeight: 550,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5em',
-                  color: '#1f2937',
+                  color: '#000000',
                   marginBottom: '1em'
                 }}
               >
                 {React.createElement(
                   FaClipboardList as unknown as React.ComponentType<any>,
-                  { style: { color: '#3b82f6' } }
+                  { style: { color: '#4E9FA2' } }
                 )}
                 Summary of Work Today
               </h2>
@@ -1327,7 +1382,7 @@ export const MyDashboard = () => {
                         {summary.notebookId}
                       </span>{' '}
                       for{' '}
-                      <span style={{ fontWeight: 600, color: '#f97316' }}>
+                      <span style={{ fontWeight: 600, color: '#FF8551' }}>
                         {(summary.duration / 60).toFixed(1)} minutes
                       </span>{' '}
                       today.
@@ -1362,7 +1417,7 @@ export const MyDashboard = () => {
           {labTime >= 600 ? (
             <>
               <img
-                src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2s4YjFtNmJxeG5zdHJyN2wyYXBrdzQ1Ymp1ZnhjMXVsM2ZsNWFlcyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/mkfTnlBlIeNIA/giphy.gif"
+                src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZng3ZHhtbXlwNG9xMTM4eDg3OXFscWh2Y3kwNHRyNDdvYzhiNHo1aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OVIqCr0qX7UVA4A6rF/giphy.gif"
                 alt="Celebration Meme"
                 style={{
                   maxWidth: '300px',
@@ -1374,20 +1429,20 @@ export const MyDashboard = () => {
                 style={{
                   fontSize: '1.3em',
                   fontWeight: 700,
-                  color: '#10b981',
+                  color: '#FF8551',
                   marginTop: '1em'
                 }}
               >
                 Learning streak unlocked! 🔥
               </p>
-              <p style={{ fontSize: '1.1em', color: '#4b5563' }}>
+              <p style={{ fontSize: '1.1em', color: '#4E9FA2' }}>
                 You're crushing it — keep going! 💪
               </p>
             </>
           ) : (
             <>
               <img
-                src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZHZoejRuZWZuc2EzbjhjbXRtcnIwcTZpMmU5cjc1OGZqdWJxbG5paSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/cr9vIO7NsP5cY/giphy.gif"
+                src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZmRjb2QzN29iZ2tvaGI0bWx6NGZqMmt3MGNkYnpxdG13ZGIxOHRyYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/hPPx8yk3Bmqys/giphy.gif"
                 alt="Work harder meme"
                 style={{
                   maxWidth: '300px',
@@ -1399,13 +1454,13 @@ export const MyDashboard = () => {
                 style={{
                   fontSize: '1.3em',
                   fontWeight: 700,
-                  color: '#f59e0b',
+                  color: '#4E9FA2',
                   marginTop: '1em'
                 }}
               >
                 Just getting started... 🐢
               </p>
-              <p style={{ fontSize: '1.1em', color: '#6b7280' }}>
+              <p style={{ fontSize: '1.1em', color: '#000000' }}>
                 Try to hit at least 10 minutes today!
               </p>
             </>
@@ -1427,7 +1482,7 @@ export const MyDashboard = () => {
     height: '60px',
     borderRadius: '50%',
     border: 'none',
-    backgroundColor: '#fff3f0',
+    backgroundColor: '#FFDEDE',
     color: '#f28b82',
     fontSize: '2.5em',
     cursor: 'pointer',

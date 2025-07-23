@@ -26,8 +26,8 @@ export const EngagementStreakChart: React.FC<EngagementStreakChartProps> = ({ da
       <AreaChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
         <defs>
           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2a9d8f" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#2a9d8f" stopOpacity={0} />
+            <stop offset="0%" stopColor="#4E9FA2" stopOpacity={0.4} />
+            <stop offset="100%" stopColor="#4E9FA2" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" />
@@ -37,7 +37,7 @@ export const EngagementStreakChart: React.FC<EngagementStreakChartProps> = ({ da
         <Area
           type="monotone"
           dataKey="minutes"
-          stroke="#2a9d8f"
+          stroke="#4E9FA2"
           strokeWidth={3}
           fill="url(#areaGradient)"
           dot={{ r: 4 }}

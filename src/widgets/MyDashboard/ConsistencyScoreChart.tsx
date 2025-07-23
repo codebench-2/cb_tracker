@@ -20,8 +20,8 @@ export const ConsistencyScoreChart: React.FC<Props> = ({ scores }) => {
         <AreaChart data={scores} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#e76f51" stopOpacity={0.5} />
-              <stop offset="95%" stopColor="#e76f51" stopOpacity={0} />
+              <stop offset="5%" stopColor="#FF8551" stopOpacity={0.5} />
+              <stop offset="95%" stopColor="#FF8551" stopOpacity={0} />
             </linearGradient>
           </defs>
 
@@ -40,7 +40,7 @@ export const ConsistencyScoreChart: React.FC<Props> = ({ scores }) => {
           <Area
             type="monotone"
             dataKey="value"
-            stroke="#e76f51"
+            stroke="#FF8551"
             fillOpacity={1}
             fill="url(#colorScore)"
             strokeWidth={3}
