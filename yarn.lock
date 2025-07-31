@@ -1604,6 +1604,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/canvas-confetti@npm:^1.9.0":
+  version: 1.9.0
+  resolution: "@types/canvas-confetti@npm:1.9.0"
+  checksum: 56227a362cead21ab76b0870e07e0cc2d26c800f5bc0fc109e4a3eca1a4d4dd317e1292163246d389827b7f30ce9e6eca3915681f3c80ed1e46491018f48a266
+  languageName: node
+  linkType: hard
+
 "@types/create-react-class@npm:*":
   version: 15.6.9
   resolution: "@types/create-react-class@npm:15.6.9"
@@ -2448,6 +2455,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"canvas-confetti@npm:^1.9.3":
+  version: 1.9.3
+  resolution: "canvas-confetti@npm:1.9.3"
+  checksum: db044a9c9ca0e58eafd115f7dfc2f9ecc377be34d8a5dd75901dae0dafd4fb0b75fbbf8edd48bbefad2468653c5838348f0e768b79727a924259a9ada343ea30
+  languageName: node
+  linkType: hard
+
 "cb-tracker@workspace:.":
   version: 0.0.0-use.local
   resolution: "cb-tracker@workspace:."
@@ -2460,6 +2474,7 @@ __metadata:
     "@jupyterlab/mainmenu": ^4.4.4
     "@jupyterlab/notebook": ^4.4.4
     "@lumino/widgets": ^2.7.1
+    "@types/canvas-confetti": ^1.9.0
     "@types/json-schema": ^7.0.11
     "@types/react": ^18.2.0
     "@types/react-addons-linked-state-mixin": ^0.14.22
@@ -2467,6 +2482,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^6.1.0
     "@typescript-eslint/parser": ^6.1.0
     axios: ^1.10.0
+    canvas-confetti: ^1.9.3
     css-loader: ^6.7.1
     eslint: ^8.36.0
     eslint-config-prettier: ^8.8.0

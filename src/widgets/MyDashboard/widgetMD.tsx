@@ -14,6 +14,7 @@ import { TbTargetArrow } from 'react-icons/tb';
 import { GiBookCover } from 'react-icons/gi';
 import { FaLock as FaLockIcon, FaUnlock as FaUnlockIcon } from 'react-icons/fa';
 import { BsPersonWorkspace } from "react-icons/bs";
+import confetti from 'canvas-confetti';
 
 import iron from '../../common/images/badges/iron.png';
 import bronze from '../../common/images/badges/bronze.png';
@@ -36,7 +37,7 @@ function LockIcon({ onUnlock }: { onUnlock: () => void }) {
     timeoutRef.current = setTimeout(() => {
       setIsLocked(false);
       onUnlock();
-    }, 2000); // 2 秒解鎖
+    }, 2000); // Unlock after 2 seconds
   };
 
   const handleUp = () => {
@@ -342,6 +343,32 @@ const todayMinutes = last120Days[last120Days.length - 1];
 const todayContribution = todayMinutes >= 10 ? 1 : 0;
 const streak = historicalStreak + todayContribution;
 setConsistencyStreak([{ day: 'Current', value: streak }]);
+
+// ----- Median Engagement Time -----
+const sortedDates = Object.keys(dailyMap).sort(
+  (a, b) => new Date(a).getTime() - new Date(b).getTime()
+);
+
+const startIndex = sortedDates.findIndex(date => dailyMap[date] > 0);
+const fromFirstUseDates = sortedDates.slice(startIndex);
+
+const fromFirstUseMinutes: number[] = fromFirstUseDates.map(date =>
+  parseFloat(((dailyMap[date] || 0) / 60).toFixed(1))
+);
+
+if (fromFirstUseMinutes.length > 0) {
+  const sortedMinutes = [...fromFirstUseMinutes].sort((a, b) => a - b);
+  const mid = Math.floor(sortedMinutes.length / 2);
+  let median = 0;
+  if (sortedMinutes.length % 2 === 0) {
+    median = (sortedMinutes[mid - 1] + sortedMinutes[mid]) / 2;
+  } else {
+    median = sortedMinutes[mid];
+  }
+  setMedianEngagement(parseFloat(median.toFixed(1)));
+} else {
+  setMedianEngagement(null);
+}
   };
 
   // For student profile
@@ -381,20 +408,62 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
   useEffect(() => {
     const percent = (todayMinutes / targetMinutes) * 100;
   
-    if (percent >= 100 && !goalAwarded) {
-      setGoalStatus('Goal achieved! 🎉');
-      setGoalAwarded(true);
+    let newStatus = '';
+    let achieved = goalAwarded;
+  
+    if (percent >= 100) {
+      newStatus = 'Goal achieved! 🎉';
+      if (!goalAwarded) {
+        achieved = true;
+        launchConfetti(); // 🎉 只触发一次
+      }
     } else if (percent >= 70) {
-      setGoalStatus('Almost there 💪');
-      setGoalAwarded(false);
+      newStatus = 'Almost there 💪';
+      achieved = false;
     } else if (percent >= 50) {
-      setGoalStatus('Halfway there ✨');
-      setGoalAwarded(false);
+      newStatus = 'Halfway there ✨';
+      achieved = false;
     } else {
-      setGoalStatus('Just started 🚀');
-      setGoalAwarded(false);
+      newStatus = 'Just started 🚀';
+      achieved = false;
     }
-  }, [todayMinutes, targetMinutes, goalAwarded]);  
+  
+    // 避免重复 setState 造成闪烁
+    if (newStatus !== goalStatus) {
+      setGoalStatus(newStatus);
+    }
+    if (achieved !== goalAwarded) {
+      setGoalAwarded(achieved);
+    }
+  }, [todayMinutes, targetMinutes, goalStatus, goalAwarded]);  
+
+  const launchConfetti = () => {
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+  
+    const frame = () => {
+      confetti({
+        particleCount: 4,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#FF8551', '#4E9FA2', '#FFD700', '#FFDEDE']
+      });
+      confetti({
+        particleCount: 4,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#FF8551', '#4E9FA2', '#FFD700', '#FFDEDE']
+      });
+  
+      if (Date.now() < animationEnd) {
+        requestAnimationFrame(frame);
+      }
+    };
+  
+    frame();
+  };
 
   // For streaks & engagement chart
   useEffect(() => {
@@ -487,9 +556,9 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
 
       // Median engagement time
       // Get all dates with logs sorted
-const sortedDates = Object.keys(dailyMap).sort(
-  (a, b) => new Date(a).getTime() - new Date(b).getTime()
-);
+      const sortedDates = Object.keys(dailyMap).sort(
+        (a, b) => new Date(a).getTime() - new Date(b).getTime()
+      );
 
 // Find first non-zero engagement day
 const startIndex = sortedDates.findIndex(date => dailyMap[date] > 0);
