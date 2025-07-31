@@ -63,6 +63,7 @@
         "@jupyterlab/notebook": "^4.4.4",
         "@lumino/widgets": "^2.7.1",
         "axios": "^1.10.0",
+        "canvas-confetti": "^1.9.3",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-icons": "^5.5.0",
@@ -73,6 +74,7 @@
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",
+        "@types/canvas-confetti": "^1.9.0",
         "@types/json-schema": "^7.0.11",
         "@types/react": "^18.2.0",
         "@types/react-addons-linked-state-mixin": "^0.14.22",
