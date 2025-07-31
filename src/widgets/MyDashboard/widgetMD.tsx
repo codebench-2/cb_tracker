@@ -13,6 +13,7 @@ import { COURSE_ID } from '../../common/config';
 import { TbTargetArrow } from 'react-icons/tb';
 import { GiBookCover } from 'react-icons/gi';
 import { FaLock as FaLockIcon, FaUnlock as FaUnlockIcon } from 'react-icons/fa';
+import { BsPersonWorkspace } from "react-icons/bs";
 
 import iron from '../../common/images/badges/iron.png';
 import bronze from '../../common/images/badges/bronze.png';
@@ -124,16 +125,16 @@ function getBadge(streak: number): { icon: React.ReactNode; level: string } {
 }
 
 function getLevelNumber(streak: number): string {
-  if (streak >= 100) return 'I';         // Challenger
-  else if (streak >= 90) return 'II';    // Grandmaster
-  else if (streak >= 70) return 'III';   // Master
-  else if (streak >= 50) return 'IV';    // Diamond
-  else if (streak >= 30) return 'V';     // Emerald
-  else if (streak >= 14) return 'VI';    // Platinum
-  else if (streak >= 7) return 'VII';    // Gold
-  else if (streak >= 5) return 'VIII';   // Silver
-  else if (streak >= 2) return 'IX';     // Bronze
-  return 'X';                            // Iron
+  if (streak >= 100) return 'X';         // Challenger
+  else if (streak >= 90) return 'IX';    // Grandmaster
+  else if (streak >= 70) return 'VIII';   // Master
+  else if (streak >= 50) return 'VII';    // Diamond
+  else if (streak >= 30) return 'VI';     // Emerald
+  else if (streak >= 14) return 'V';    // Platinum
+  else if (streak >= 7) return 'IV';    // Gold
+  else if (streak >= 5) return 'III';   // Silver
+  else if (streak >= 2) return 'II';     // Bronze
+  return 'I';                            // Iron
 }
 
 const pulse = keyframes`
@@ -185,6 +186,8 @@ export const MyDashboard = () => {
     net_id: string;
     email: string;
   } | null>(null);
+  
+  const [medianEngagement, setMedianEngagement] = useState<number | null>(null);
 
   const fetchDashboardData = async () => {
     const logs = await fetchLogsFromCodeBench();
@@ -481,6 +484,36 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
 
       // Engagement time chart data (7 days)
       setDailyActiveMinutes(last7Days);
+
+      // Median engagement time
+      // Get all dates with logs sorted
+const sortedDates = Object.keys(dailyMap).sort(
+  (a, b) => new Date(a).getTime() - new Date(b).getTime()
+);
+
+// Find first non-zero engagement day
+const startIndex = sortedDates.findIndex(date => dailyMap[date] > 0);
+const fromFirstUseDates = sortedDates.slice(startIndex);
+
+// Convert to minutes list
+const fromFirstUseMinutes: number[] = fromFirstUseDates.map(date =>
+  parseFloat(((dailyMap[date] || 0) / 60).toFixed(1))
+);
+
+// Calculate median
+const sortedMinutes = [...fromFirstUseMinutes].sort((a, b) => a - b);
+let median = 0;
+const mid = Math.floor(sortedMinutes.length / 2);
+
+if (sortedMinutes.length % 2 === 0) {
+  median = (sortedMinutes[mid - 1] + sortedMinutes[mid]) / 2;
+} else {
+  median = sortedMinutes[mid];
+}
+median = parseFloat(median.toFixed(1));
+
+// Save it to state
+setMedianEngagement(median);
     }
 
     loadData();
@@ -736,7 +769,38 @@ setConsistencyStreak([{ day: 'Current', value: streak }]);
                 </div>
               </div>
 
-              {/* Right: Study Minutes */}
+              {/* Middle: Median Engagement */}
+<div style={{ textAlign: 'center', color: '#333' }}>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.5em',
+      marginBottom: '0.2em'
+    }}
+  >
+         {React.createElement(BsPersonWorkspace as unknown as React.ComponentType<any>, {
+       style: {
+         color: '#e63946',
+         fontSize: '1.5em',
+         animation: 'pulse 1.5s infinite'
+       }
+     })}
+    <span style={{ fontWeight: 500, fontSize: '1em', color: '#000000' }}>
+      Median Active
+    </span>
+  </div>
+  <div
+    style={{
+      fontSize: '2em',
+      fontWeight: 'bold',
+      color: '#e63946'
+    }}
+  >
+    {medianEngagement ?? '--'} mins
+  </div>
+</div>
 
               {/* Right: Study Minutes */}
               <div style={{ textAlign: 'right', color: '#333' }}>
