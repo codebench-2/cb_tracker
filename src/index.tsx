@@ -1185,71 +1185,50 @@ const readingTrackerPlugin: JupyterFrontEndPlugin<void> = {
     }
 
     // 👁️ Window/tab focus tracking
-    let windowActiveStart: number | null = document.hasFocus()
-      ? Date.now()
-      : null;
-    let windowFocusCount = 0;
-    let totalWindowActiveTime = 0;
-    // Track if we've had at least one blur event
-    let hasBlurOccurred = false;
+let windowActiveStart: number | null = document.visibilityState === 'visible'
+? Date.now()
+: null;
+let windowFocusCount = 0;
+let totalWindowActiveTime = 0;
 
-    (window as any).__labFocusCount = 0;
+(window as any).__labFocusCount = 0;
 
-    window.addEventListener('blur', async () => {
-      if (windowActiveStart !== null) {
-        const now = Date.now();
-        // Only track time if not paused
-        if (!trackingPaused) {
-          const windowDuration = Math.floor((now - windowActiveStart) / 1000);
-          totalWindowActiveTime += now - windowActiveStart;
+document.addEventListener('visibilitychange', async () => {
+const now = Date.now();
 
-          // Log window activity immediately when user switches tabs
-          if (windowDuration > 0) {
-            await logManager.addLog(
-              {
-                net_id: NET_ID,
-                course_id: COURSE_ID,
-                log_info: {
-                  type: 'window',
-                  duration: windowDuration
-                }
-              },
-              true
-            ); // Immediate upload when user switches tabs
+if (document.visibilityState === 'hidden') {
+  // Leaving window
+  if (windowActiveStart !== null && !trackingPaused) {
+    const windowDuration = Math.floor((now - windowActiveStart) / 1000);
+    totalWindowActiveTime += now - windowActiveStart;
+
+    if (windowDuration > 0) {
+      await logManager.addLog(
+        {
+          net_id: NET_ID,
+          course_id: COURSE_ID,
+          log_info: {
+            type: 'window',
+            duration: windowDuration
           }
-        }
-        windowActiveStart = null;
+        },
+        true
+      );
+    }
+  }
+  windowActiveStart = null;
+  (window as any).__labActiveTime = totalWindowActiveTime;
+  console.log(`👋 Window hidden - logged ${totalWindowActiveTime / 1000}s`);
+}
 
-        (window as any).__labActiveTime = totalWindowActiveTime;
-
-        if (hasBlurOccurred) {
-          windowFocusCount += 1;
-          (window as any).__labFocusCount = windowFocusCount;
-        }
-
-        hasBlurOccurred = true;
-        console.log(
-          `👋 Left window - logged ${Math.floor((now - (windowActiveStart || now)) / 1000)}s`
-        );
-      }
-    });
-
-    window.addEventListener('focus', () => {
-      // Only start tracking if not paused
-      if (!trackingPaused && windowActiveStart === null) {
-        windowActiveStart = Date.now();
-        console.log(`👀 Returned to window`);
-      }
-    });
-
-    // Add visibility change handling
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        window.dispatchEvent(new Event('blur'));
-      } else if (document.visibilityState === 'visible') {
-        window.dispatchEvent(new Event('focus'));
-      }
-    });
+if (document.visibilityState === 'visible') {
+  // Returning to window
+  windowActiveStart = Date.now();
+  windowFocusCount += 1;
+  (window as any).__labFocusCount = windowFocusCount;
+  console.log(`👀 Window visible again (switch count: ${windowFocusCount})`);
+}
+});
 
     // Inactivity tracking for page sessions
     let lastActivityTimestamp = Date.now();
